@@ -3,7 +3,6 @@ import { createRoot } from 'react-dom/client'
 import { supabase, signInWithGoogle, GLOBAL_CSS, NovaMark } from './lib/core.jsx'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
-import PayDone from './pages/PayDone'
 
 function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
@@ -20,8 +19,7 @@ function App() {
   const nav = to => { window.history.pushState({}, '', to); setPath(to) }
 
   let page
-  if (path.startsWith('/pay/done')) page = <PayDone nav={nav} />
-  else if (path.startsWith('/app')) {
+  if (path.startsWith('/app')) {
     if (session === undefined) page = <Loading />
     else if (!session) page = <SignIn />
     else page = <Dashboard session={session} nav={nav} />

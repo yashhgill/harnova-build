@@ -2,14 +2,16 @@
  * HarNova Build — single Cloudflare Worker.
  *
  *  ┌ build.harnova.my            → dashboard (static assets, /api/* runs here first)
- *  ├ build.harnova.my/api/*      → JSON API (auth, sites, billing, showcase)
+ *  ├ build.harnova.my/api/*      → JSON API (auth, sites, QR billing, admin approvals, showcase)
  *  ├ {anything}.harnova.my       → serve that site's HTML from Supabase (cached)
  *  └ customer-custom-domain.com  → same lookup via custom_domain column
  *
- * Secrets (wrangler secret put …):
- *   SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
- *   BILLPLZ_KEY, BILLPLZ_XSIGNATURE, BILLPLZ_COLLECTION
- * Vars (wrangler.toml): ROOT_DOMAIN, APP_HOST, BILLPLZ_BASE, PRICE_SEN
+ * Payments: manual DuitNow QR. Users pay the QR with a unique reference in the
+ * transfer notes, email/WhatsApp the receipt; an admin approves in-dashboard,
+ * which flips the site live and stacks +30 days. No payment gateway needed.
+ *
+ * Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+ * Vars (wrangler.toml): ROOT_DOMAIN, APP_HOST, PRICE_SEN, ADMIN_EMAILS, PAY_EMAIL
  */
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' }
@@ -54,51 +56,33 @@ const MAX_HTML = 1_500_000 // ~1.5 MB
 
 function validSubdomain(s) { return typeof s === 'string' && SUB_RE.test(s) }
 
-/* ─── Billplz ─────────────────────────────────────────────────────── */
-async function billplzCreateBill(env, { email, name, description, siteId, userId }) {
-  const form = new URLSearchParams({
-    collection_id: env.BILLPLZ_COLLECTION,
-    email,
-    name: name || 'HarNova user',
-    amount: String(env.PRICE_SEN || 1000),
-    description,
-    callback_url: `https://${env.APP_HOST}/api/billing/callback`,
-    redirect_url: `https://${env.APP_HOST}/pay/done`,
-    reference_1_label: 'site_id',
-    reference_1: siteId,
-    reference_2_label: 'user_id',
-    reference_2: userId,
-  })
-  const res = await fetch(`${env.BILLPLZ_BASE}/api/v3/bills`, {
-    method: 'POST',
-    headers: {
-      authorization: 'Basic ' + btoa(`${env.BILLPLZ_KEY}:`),
-      'content-type': 'application/x-www-form-urlencoded',
-    },
-    body: form.toString(),
-  })
-  const data = await res.json()
-  if (!res.ok) throw new Error(`billplz ${res.status}: ${JSON.stringify(data)}`)
-  return data // { id, url, ... }
+/* ─── Payment helpers ─────────────────────────────────────────────── */
+function makeReference(subdomain) {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'
+  let tail = ''
+  const rnd = crypto.getRandomValues(new Uint8Array(4))
+  for (const b of rnd) tail += chars[b % chars.length]
+  const stem = subdomain.replace(/[^a-z0-9]/g, '').slice(0, 6).toUpperCase() || 'SITE'
+  return `HB-${stem}-${tail}`
 }
 
-/* Verify Billplz X-Signature: HMAC-SHA256 over "key"+value pairs,
-   sorted case-insensitively, joined with '|'. */
-async function billplzVerify(env, params) {
-  const given = params.x_signature
-  if (!given) return false
-  const src = Object.keys(params)
-    .filter(k => k !== 'x_signature')
-    .sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()))
-    .map(k => `${k}${params[k]}`)
-    .join('|')
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(env.BILLPLZ_XSIGNATURE),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'],
-  )
-  const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(src))
-  const hex = [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('')
-  return hex === given.toLowerCase()
+function isAdmin(env, user) {
+  return (env.ADMIN_EMAILS || '').toLowerCase().split(',').map(e => e.trim()).filter(Boolean)
+    .includes((user.email || '').toLowerCase())
+}
+
+/* Approve a payment: mark paid + flip site live, stacking +30 days. */
+async function activatePayment(env, payment) {
+  await sb(env, `payments?id=eq.${payment.id}`, {
+    method: 'PATCH', body: { status: 'paid', paid_at: new Date().toISOString() },
+  })
+  const sites = await sb(env, `sites?id=eq.${payment.site_id}&select=expires_at&limit=1`)
+  const base = sites[0]?.expires_at && new Date(sites[0].expires_at) > new Date()
+    ? new Date(sites[0].expires_at) : new Date()
+  const next = new Date(base.getTime() + 30 * 24 * 3600 * 1000).toISOString()
+  await sb(env, `sites?id=eq.${payment.site_id}`, {
+    method: 'PATCH', body: { status: 'live', expires_at: next },
+  })
 }
 
 /* ─── Site serving (the product itself) ───────────────────────────── */
@@ -176,35 +160,6 @@ async function handleApi(req, env, url) {
     return j({ available, reason: available ? null : 'taken' }, 200, cors)
   }
 
-  /* ── Billplz payment callback (server-to-server) ── */
-  if (path === '/billing/callback' && method === 'POST') {
-    const form = await req.formData()
-    const params = Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]))
-    const ok = await billplzVerify(env, params)
-    if (!ok) return j({ error: 'bad signature' }, 403)
-    const paid = params.paid === 'true'
-    const pays = await sb(env, `payments?billplz_id=eq.${encodeURIComponent(params.id)}&select=id,site_id,status&limit=1`)
-    const payment = pays[0]
-    if (!payment) return j({ error: 'unknown bill' }, 404)
-    if (payment.status === 'paid') return j({ ok: true }) // idempotent
-    if (paid) {
-      await sb(env, `payments?id=eq.${payment.id}`, {
-        method: 'PATCH', body: { status: 'paid', paid_at: new Date().toISOString() },
-      })
-      // extend from current expiry if still in the future, else from now
-      const sites = await sb(env, `sites?id=eq.${payment.site_id}&select=expires_at&limit=1`)
-      const base = sites[0]?.expires_at && new Date(sites[0].expires_at) > new Date()
-        ? new Date(sites[0].expires_at) : new Date()
-      const next = new Date(base.getTime() + 30 * 24 * 3600 * 1000).toISOString()
-      await sb(env, `sites?id=eq.${payment.site_id}`, {
-        method: 'PATCH', body: { status: 'live', expires_at: next },
-      })
-    } else {
-      await sb(env, `payments?id=eq.${payment.id}`, { method: 'PATCH', body: { status: 'failed' } })
-    }
-    return j({ ok: true })
-  }
-
   /* ── Everything below requires a signed-in user ── */
   const user = await getUser(env, req)
   if (!user) return j({ error: 'unauthorized' }, 401, cors)
@@ -212,7 +167,7 @@ async function handleApi(req, env, url) {
   /* List my sites */
   if (path === '/sites' && method === 'GET') {
     const rows = await sb(env, `sites?user_id=eq.${user.id}&select=id,name,subdomain,custom_domain,status,showcase,expires_at,created_at&order=created_at.desc`)
-    return j({ sites: rows, root: env.ROOT_DOMAIN }, 200, cors)
+    return j({ sites: rows, root: env.ROOT_DOMAIN, admin: isAdmin(env, user), payEmail: env.PAY_EMAIL || null }, 200, cors)
   }
 
   /* Create a site (draft until paid) */
@@ -261,27 +216,51 @@ async function handleApi(req, env, url) {
     return j({ ok: true }, 200, cors)
   }
 
-  /* Create a Billplz bill for a site (first payment or renewal) */
+  /* Request a QR payment for a site (first payment or renewal).
+     Reuses an existing pending reference so users don't get duplicates. */
   if (path === '/billing/create' && method === 'POST') {
     const body = await req.json().catch(() => ({}))
     const sites = await sb(env, `sites?id=eq.${body.site_id}&user_id=eq.${user.id}&select=id,name,subdomain&limit=1`)
     const site = sites[0]
     if (!site) return j({ error: 'Site not found.' }, 404, cors)
-    const bill = await billplzCreateBill(env, {
-      email: user.email,
-      name: user.user_metadata?.full_name || user.email,
-      description: `HarNova Build \u2014 ${site.subdomain}.${env.ROOT_DOMAIN} \u00d7 30 days`,
-      siteId: site.id,
-      userId: user.id,
-    })
-    await sb(env, 'payments', {
-      method: 'POST',
-      body: { user_id: user.id, site_id: site.id, billplz_id: bill.id, amount_sen: Number(env.PRICE_SEN || 1000), status: 'pending' },
-    })
-    return j({ url: bill.url }, 200, cors)
+    const pending = await sb(env, `payments?site_id=eq.${site.id}&status=eq.pending&select=id,reference,amount_sen&order=created_at.desc&limit=1`)
+    let payment = pending[0]
+    if (!payment) {
+      const rows = await sb(env, 'payments', {
+        method: 'POST',
+        body: { user_id: user.id, site_id: site.id, reference: makeReference(site.subdomain), amount_sen: Number(env.PRICE_SEN || 1000), status: 'pending' },
+      })
+      payment = rows[0]
+    }
+    return j({
+      reference: payment.reference,
+      amount_sen: payment.amount_sen,
+      pay_email: env.PAY_EMAIL || 'hello@harnova.my',
+      site: { name: site.name, subdomain: site.subdomain },
+    }, 200, cors)
   }
 
-  return j({ error: 'not found' }, 404, cors)
+  /* ── Admin: pending payments queue ── */
+  if (path === '/admin/payments' && method === 'GET') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const rows = await sb(env, `payments?status=eq.pending&select=id,reference,amount_sen,created_at,site_id,sites(name,subdomain,status,expires_at),profiles(email,full_name)&order=created_at.asc`)
+    return j({ payments: rows }, 200, cors)
+  }
+
+  /* ── Admin: approve / reject a payment ── */
+  if (path.match(/^\/admin\/payments\/[0-9a-f-]{36}\/(approve|reject)$/) && method === 'POST') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const [, , , id, action] = path.split('/')
+    const rows = await sb(env, `payments?id=eq.${id}&select=id,site_id,status&limit=1`)
+    const payment = rows[0]
+    if (!payment) return j({ error: 'Payment not found.' }, 404, cors)
+    if (payment.status !== 'pending') return j({ error: 'Already processed.' }, 409, cors)
+    if (action === 'approve') await activatePayment(env, payment)
+    else await sb(env, `payments?id=eq.${id}`, { method: 'PATCH', body: { status: 'rejected' } })
+    return j({ ok: true }, 200, cors)
+  }
+
+    return j({ error: 'not found' }, 404, cors)
 }
 
 /* ─── Entry ───────────────────────────────────────────────────────── */

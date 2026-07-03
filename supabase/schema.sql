@@ -32,19 +32,19 @@ create index if not exists sites_subdomain_idx on public.sites (subdomain);
 create index if not exists sites_custom_domain_idx on public.sites (custom_domain);
 create index if not exists sites_user_idx on public.sites (user_id);
 
--- PAYMENTS — one row per Billplz bill
+-- PAYMENTS — one row per QR payment request (manual verification)
 create table if not exists public.payments (
   id           uuid default gen_random_uuid() primary key,
   user_id      uuid references public.profiles(id) on delete cascade not null,
   site_id      uuid references public.sites(id) on delete cascade not null,
-  billplz_id   text unique not null,
+  reference    text unique not null,          -- e.g. HB-NASI-7K2F, user puts this in transfer notes
   amount_sen   integer not null default 1000,
   status       text not null default 'pending'
-                 check (status in ('pending','paid','failed')),
+                 check (status in ('pending','paid','rejected')),
   paid_at      timestamptz,
   created_at   timestamptz default now()
 );
-create index if not exists payments_billplz_idx on public.payments (billplz_id);
+create index if not exists payments_reference_idx on public.payments (reference);
 
 -- RESERVED SUBDOMAINS
 create table if not exists public.reserved_subdomains (name text primary key);
@@ -89,7 +89,8 @@ create policy "sites insert" on public.sites    for insert with check (auth.uid(
 create policy "sites update" on public.sites    for update using (auth.uid() = user_id);
 create policy "sites delete" on public.sites    for delete using (auth.uid() = user_id);
 create policy "payments select" on public.payments for select using (auth.uid() = user_id);
--- Writes to payments + status/expiry flips happen via the Worker (service role).
+-- Payment inserts + approvals and status/expiry flips happen via the Worker (service role).
+-- Approvals are admin-only (ADMIN_EMAILS in the Worker) — you scan your bank app, click Approve, site goes live.
 
 -- PUBLIC SHOWCASE VIEW (safe columns only)
 create or replace view public.showcase_sites as

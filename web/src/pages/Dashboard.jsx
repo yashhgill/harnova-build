@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Plus, Trash2, RefreshCw, Rocket, Check, X, Pencil, Eye, LogOut, Globe } from 'lucide-react'
+import { ArrowUpRight, Plus, Trash2, RefreshCw, Rocket, Check, X, Pencil, Eye, LogOut, Globe, QrCode, Copy, ShieldCheck } from 'lucide-react'
 import { supabase, api, daysLeft, NovaMark } from '../lib/core.jsx'
 
 const W = { maxWidth: 1000, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }
@@ -10,16 +10,19 @@ export default function Dashboard({ session, nav }) {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState(null) // site being edited
   const [toast, setToast] = useState(null)
+  const [payInfo, setPayInfo] = useState(null) // QR payment modal data
+  const [admin, setAdmin] = useState(false)
+  const [payEmail, setPayEmail] = useState('hello@harnova.my')
 
   const notify = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 4200) }
 
-  const load = () => api('/sites').then(d => { setSites(d.sites); setRoot(d.root) }).catch(e => notify(e.message, false))
+  const load = () => api('/sites').then(d => { setSites(d.sites); setRoot(d.root); setAdmin(!!d.admin); if (d.payEmail) setPayEmail(d.payEmail) }).catch(e => notify(e.message, false))
   useEffect(() => { load() }, [])
 
   const pay = async site => {
     try {
-      const { url } = await api('/billing/create', { method: 'POST', body: { site_id: site.id } })
-      window.location.href = url
+      const info = await api('/billing/create', { method: 'POST', body: { site_id: site.id } })
+      setPayInfo(info)
     } catch (e) { notify(e.message, false) }
   }
 
@@ -85,6 +88,10 @@ export default function Dashboard({ session, nav }) {
           </div>
         )}
 
+        {admin && <AdminQueue notify={notify} onChanged={load} />}
+
+        {payInfo && <PayModal info={payInfo} payEmail={payEmail} onClose={() => { setPayInfo(null); load() }} notify={notify} />}
+
         {(creating || editing) && (
           <SiteEditor
             root={root}
@@ -93,7 +100,7 @@ export default function Dashboard({ session, nav }) {
             onSaved={(site, isNew) => {
               setCreating(false); setEditing(null)
               load()
-              if (isNew) { notify('Site saved as draft — pay RM10 to go live.'); pay(site) }
+              if (isNew) { notify('Site saved as draft — one RM10 QR payment and it\u2019s live.'); pay(site) }
               else notify('Code updated. Changes appear within a minute.')
             }}
           />
@@ -145,7 +152,7 @@ function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
           <Pencil size={13} /> Edit code
         </button>
         <button onClick={() => onPay(site)} className="nova-btn" style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.83rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {live ? <><RefreshCw size={13} /> Renew +30d</> : <><Rocket size={13} /> Pay RM10 · go live</>}
+          {live ? <><RefreshCw size={13} /> Renew +30d</> : <><QrCode size={13} /> Pay RM10 · go live</>}
         </button>
         <button onClick={() => onDelete(site)} className="glass-btn" aria-label={`Delete ${site.name}`} style={{ padding: '9px 11px', borderRadius: 10 }}>
           <Trash2 size={14} color="#FF7070" />
@@ -255,5 +262,100 @@ function SiteEditor({ root, site, onClose, onSaved }) {
         </div>
       </div>
     </div>
+  )
+}
+
+
+function PayModal({ info, payEmail, onClose, notify }) {
+  const amount = (info.amount_sen / 100).toFixed(2)
+  const copyRef = () => {
+    navigator.clipboard?.writeText(info.reference)
+      .then(() => notify('Reference copied — paste it in your transfer notes.'))
+      .catch(() => {})
+  }
+  const mail = `mailto:${payEmail}?subject=${encodeURIComponent(`Payment ${info.reference} — ${info.site.name}`)}&body=${encodeURIComponent(`Hi HarNova,\n\nI've paid RM${amount} for "${info.site.name}" (${info.site.subdomain}).\nReference: ${info.reference}\n\nReceipt attached.`)}`
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Pay by QR" style={{ position: 'fixed', inset: 0, zIndex: 220, background: 'rgba(4,4,10,0.82)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: 'clamp(14px,4vw,44px)' }}>
+      <div className="card rise" style={{ width: '100%', maxWidth: 480, padding: 'clamp(24px,4vw,36px)', background: '#0B0B14', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h2 className="display" style={{ fontSize: '1.2rem', fontWeight: 700 }}>Pay RM{amount} by QR</h2>
+          <button onClick={onClose} className="glass-btn" aria-label="Close" style={{ padding: 9, borderRadius: 10 }}><X size={16} /></button>
+        </div>
+        <img src="/qr.png" alt="DuitNow QR — scan with any Malaysian banking app" width="230" height="230"
+          style={{ borderRadius: 16, background: '#fff', padding: 10, width: 230, height: 230, objectFit: 'contain' }}
+          onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block' }} />
+        <div style={{ display: 'none', padding: '30px 16px', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 14, color: '#8A8AA0', fontSize: '0.88rem' }}>
+          QR is on the way — email us at <span style={{ color: '#F4F4FA' }}>{payEmail}</span> for payment details.
+        </div>
+        <p style={{ marginTop: 18, fontSize: '0.9rem', color: '#B9B9CC', lineHeight: 1.6 }}>
+          Scan with any Malaysian banking app (DuitNow), and put this reference in the <strong style={{ color: '#F4F4FA' }}>transfer notes</strong>:
+        </p>
+        <button onClick={copyRef} className="glass-btn mono" style={{ marginTop: 12, padding: '12px 20px', borderRadius: 12, fontSize: '1rem', letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
+          {info.reference} <Copy size={14} />
+        </button>
+        <ol style={{ textAlign: 'left', margin: '20px auto 0', maxWidth: 360, color: '#8A8AA0', fontSize: '0.87rem', lineHeight: 1.7, paddingLeft: 20 }}>
+          <li>Scan &amp; pay RM{amount} with the reference in the notes</li>
+          <li>Email your receipt to <a href={mail} style={{ color: '#22D3EE' }}>{payEmail}</a></li>
+          <li>We verify and your site goes live — usually within a few hours, always same day</li>
+        </ol>
+        <a href={mail} className="nova-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 22, padding: '13px 28px', borderRadius: 99, fontWeight: 600, fontSize: '0.92rem' }}>
+          I've paid — email my receipt <ArrowUpRight size={15} />
+        </a>
+        <p style={{ marginTop: 14, fontSize: '0.76rem', color: '#6E6E85' }}>Your site stays saved as a draft until we confirm the payment.</p>
+      </div>
+    </div>
+  )
+}
+
+function AdminQueue({ notify, onChanged }) {
+  const [queue, setQueue] = useState(null)
+  const [busy, setBusy] = useState(null)
+  const load = () => api('/admin/payments').then(d => setQueue(d.payments)).catch(e => notify(e.message, false))
+  useEffect(() => { load() }, [])
+  const act = async (p, action) => {
+    setBusy(p.id)
+    try {
+      await api(`/admin/payments/${p.id}/${action}`, { method: 'POST' })
+      notify(action === 'approve' ? `${p.reference} approved — site is live +30d.` : `${p.reference} rejected.`)
+      load(); onChanged()
+    } catch (e) { notify(e.message, false) }
+    setBusy(null)
+  }
+  if (!queue) return null
+  return (
+    <section style={{ marginTop: 46 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <ShieldCheck size={17} color="#F5C542" />
+        <h2 className="display" style={{ fontSize: '1.1rem', fontWeight: 700 }}>Payment queue</h2>
+        <span className="mono" style={{ fontSize: '0.72rem', color: '#8A8AA0' }}>ADMIN · {queue.length} pending</span>
+      </div>
+      {queue.length === 0 ? (
+        <p style={{ marginTop: 14, color: '#6E6E85', fontSize: '0.9rem' }}>All clear — nothing waiting for verification.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
+          {queue.map(p => (
+            <div key={p.id} className="card" style={{ padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
+              <div style={{ flex: '1 1 220px', minWidth: 0 }}>
+                <span className="mono" style={{ fontSize: '0.85rem', color: '#F5C542' }}>{p.reference}</span>
+                <div style={{ fontSize: '0.85rem', color: '#B9B9CC', marginTop: 5 }}>
+                  {p.sites?.name} · <span className="mono" style={{ fontSize: '0.78rem' }}>{p.sites?.subdomain}</span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#6E6E85', marginTop: 3 }}>
+                  {p.profiles?.email} · RM{(p.amount_sen / 100).toFixed(2)} · {new Date(p.created_at).toLocaleString('en-MY')}
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 9 }}>
+                <button disabled={busy === p.id} onClick={() => act(p, 'approve')} className="nova-btn" style={{ padding: '9px 18px', borderRadius: 10, fontSize: '0.85rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <Check size={13} /> Approve
+                </button>
+                <button disabled={busy === p.id} onClick={() => act(p, 'reject')} className="glass-btn" style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <X size={13} color="#FF7070" /> Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }

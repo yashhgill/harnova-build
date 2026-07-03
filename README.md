@@ -31,10 +31,10 @@ web/                  → Vite/React dashboard (landing, showcase, my-sites, edi
 3. Auth → URL configuration → Site URL `https://build.harnova.my`, add `https://build.harnova.my/app` to redirect list.
 4. Copy Project URL, `anon` key, `service_role` key.
 
-### 2. Billplz
-1. Create a **Collection** (name it "HarNova Build"), note the Collection ID.
-2. Settings → copy **API Secret Key** and **X Signature Key**.
-3. Test first on sandbox (`billplz-sandbox.com`) — set `BILLPLZ_BASE` in `wrangler.toml` accordingly, and use sandbox keys.
+### 2. Payments (DuitNow QR — no gateway, no SSM needed)
+1. Export your DuitNow QR from your banking app and save it as `web/public/qr.png` (square PNG works best).
+2. In `worker/wrangler.toml` set `ADMIN_EMAILS` (your Google login email) and `PAY_EMAIL` (where receipts go).
+3. That's it — no API keys. You verify transfers in your banking app and approve them in the dashboard.
 
 ### 3. Worker + DNS
 ```
@@ -44,9 +44,6 @@ cd ../worker && npm install
 npx wrangler secret put SUPABASE_URL
 npx wrangler secret put SUPABASE_ANON_KEY
 npx wrangler secret put SUPABASE_SERVICE_KEY
-npx wrangler secret put BILLPLZ_KEY
-npx wrangler secret put BILLPLZ_XSIGNATURE
-npx wrangler secret put BILLPLZ_COLLECTION
 npx wrangler deploy
 ```
 In the Cloudflare dashboard (harnova.my zone):
@@ -60,14 +57,14 @@ cd worker && npx wrangler dev          # API on :8787
 cd web && npm run dev                  # Vite on :5173, /api proxied to :8787
 ```
 
-## Payment flow (Billplz)
+## Payment flow (manual QR)
 
-1. `POST /api/billing/create { site_id }` → Worker creates a Billplz bill (RM10, FPX/card), stores a pending `payments` row, returns the bill URL.
-2. User pays on Billplz.
-3. Billplz **callback** (server→server) hits `/api/billing/callback`; Worker verifies `x_signature` (HMAC-SHA256), marks payment paid, sets site `status=live` and stacks `expires_at` +30 days.
-4. Billplz **redirect** sends the user to `/pay/done` for the success/failure screen. Activation never depends on the redirect.
+1. User clicks **Pay RM10 · go live** → `POST /api/billing/create` mints a unique reference like `HB-NASI-7K2F` (reused if one is already pending, so no duplicates) and shows the QR modal: your DuitNow QR, the reference to put in transfer notes, and a pre-filled receipt email.
+2. User pays the QR and emails the receipt with the reference.
+3. You check your banking app, open the dashboard — the **Payment queue** (visible only to `ADMIN_EMAILS`) lists pending references with site + payer info. Click **Approve**.
+4. Approval marks the payment paid, sets the site `status=live`, and stacks `expires_at` +30 days. Reject handles typos/no-shows.
 
-Renewals are the same call on an existing site — days stack on top of the current expiry.
+Renewals are the same flow — days stack on top of the current expiry. When you get your SSM later, the gateway slots back in behind the same `payments` table.
 
 ## Custom domains (v1)
 
@@ -79,7 +76,7 @@ Renewals are the same call on an existing site — days stack on top of the curr
 
 ## Business notes
 
-- Billplz FPX ≈ RM1 flat per transaction → ~RM9 gross margin per RM10 renewal.
+- QR transfers are free → RM10 stays RM10. When volume makes manual approval painful, register SSM and swap in a gateway behind the same `payments` table.
 - Expired sites aren't deleted — they show a renewal holding page, and one payment revives them. Lapsed users are your cheapest reactivation channel.
 - Showcase is opt-in (`sites.showcase`), surfaced on the landing page as scaled live iframe previews — social proof straight from production.
 - Abuse guardrails in v1: 1.5 MB HTML cap, reserved subdomain list, content served under *their* subdomain only. Add a takedown flag column when volume grows.

@@ -7,7 +7,7 @@ const W = { maxWidth: 1100, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' 
 const STEPS = [
   { icon: ShieldCheck, title: 'Sign in with Google', text: 'One tap. Your sites live under your account.' },
   { icon: Code2, title: 'Paste your AI code', text: 'The HTML that ChatGPT, Claude or v0 wrote for you — paste it as-is.' },
-  { icon: Sparkles, title: 'Pay RM10', text: 'FPX or card via Billplz. One payment, one site, 30 days.' },
+  { icon: Sparkles, title: 'Pay RM10 by QR', text: 'Scan our DuitNow QR with any Malaysian banking app. One payment, one site, 30 days.' },
   { icon: Rocket, title: 'You\u2019re live', text: 'yourname.harnova.my with SSL, on Cloudflare\u2019s edge, worldwide.' },
 ]
 
@@ -50,7 +50,7 @@ export default function Landing({ session, nav }) {
             Your AI wrote the site.<br /><span className="nova-text">We put it online.</span>
           </h1>
           <p className="rise" style={{ margin: '24px auto 0', fontSize: 'clamp(1rem,1.5vw,1.15rem)', lineHeight: 1.7, color: '#B9B9CC', maxWidth: 560, fontWeight: 300, animationDelay: '.2s' }}>
-            Paste the code, pay <strong style={{ color: '#F4F4FA' }}>RM10</strong>, and it's live on your own <span className="mono" style={{ fontSize: '0.95em' }}>.{root}</span> link with SSL — in seconds. No terminal. No GitHub. No DevOps.
+            Paste the code, pay <strong style={{ color: '#F4F4FA' }}>RM10 by DuitNow QR</strong>, and it's live on your own <span className="mono" style={{ fontSize: '0.95em' }}>.{root}</span> link with SSL — in seconds. No terminal. No GitHub. No DevOps.
           </p>
           <div className="rise" style={{ marginTop: 38, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap', animationDelay: '.3s' }}>
             <button onClick={cta} className="nova-btn" style={{ padding: '15px 32px', borderRadius: 99, fontWeight: 600, fontSize: '1rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>

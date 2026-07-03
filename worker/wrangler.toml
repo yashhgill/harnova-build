@@ -13,8 +13,9 @@ run_worker_first = ["/api/*"]
 [vars]
 ROOT_DOMAIN = "harnova.my"
 APP_HOST = "build.harnova.my"
-BILLPLZ_BASE = "https://www.billplz.com"   # sandbox: https://www.billplz-sandbox.com
 PRICE_SEN = "1000"
+ADMIN_EMAILS = "yashhgill@gmail.com"        # comma-separated; only these accounts see the admin queue
+PAY_EMAIL = "hello@harnova.my"              # where users email their payment receipt
 
 # Routes: the wildcard picks up every hosted site.
 routes = [
@@ -26,6 +27,3 @@ routes = [
 #   wrangler secret put SUPABASE_URL
 #   wrangler secret put SUPABASE_ANON_KEY
 #   wrangler secret put SUPABASE_SERVICE_KEY
-#   wrangler secret put BILLPLZ_KEY
-#   wrangler secret put BILLPLZ_XSIGNATURE
-#   wrangler secret put BILLPLZ_COLLECTION
