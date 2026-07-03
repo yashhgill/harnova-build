@@ -235,7 +235,7 @@ async function handleApi(req, env, url) {
     return j({
       reference: payment.reference,
       amount_sen: payment.amount_sen,
-      pay_email: env.PAY_EMAIL || 'hello@harnova.my',
+      pay_email: env.PAY_EMAIL || 'yashchaal99@gmail.com',
       site: { name: site.name, subdomain: site.subdomain },
     }, 200, cors)
   }

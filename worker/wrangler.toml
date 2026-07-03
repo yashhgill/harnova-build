@@ -14,8 +14,8 @@ run_worker_first = ["/api/*"]
 ROOT_DOMAIN = "harnova.my"
 APP_HOST = "build.harnova.my"
 PRICE_SEN = "1000"
-ADMIN_EMAILS = "yashhgill@gmail.com"        # comma-separated; only these accounts see the admin queue
-PAY_EMAIL = "hello@harnova.my"              # where users email their payment receipt
+ADMIN_EMAILS = "yashchaal99@gmail.com"        # comma-separated; only these accounts see the admin queue
+PAY_EMAIL = "yashchaal99@gmail.com"              # where users email their payment receipt
 
 # Routes: the wildcard picks up every hosted site.
 routes = [

@@ -12,7 +12,7 @@ export default function Dashboard({ session, nav }) {
   const [toast, setToast] = useState(null)
   const [payInfo, setPayInfo] = useState(null) // QR payment modal data
   const [admin, setAdmin] = useState(false)
-  const [payEmail, setPayEmail] = useState('hello@harnova.my')
+  const [payEmail, setPayEmail] = useState('yashchaal99@gmail.com')
 
   const notify = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 4200) }
 
