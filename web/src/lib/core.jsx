@@ -1,8 +1,9 @@
 import { createClient } from '@supabase/supabase-js'
 
+// URL + anon key are public by design (they ship in the JS bundle; RLS is the guard).
 export const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  import.meta.env.VITE_SUPABASE_URL || 'https://fxlmdbouctcfxqewvcst.supabase.co',
+  import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4bG1kYm91Y3RjZnhxZXd2Y3N0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODMxMDUwNjYsImV4cCI6MjA5ODY4MTA2Nn0.T2vHhW9QFUmfSQkuKbyQWtCTupWgPHhvDiTrLESVepE',
 )
 
 export async function api(path, { method = 'GET', body } = {}) {
