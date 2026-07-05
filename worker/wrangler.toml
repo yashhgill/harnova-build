@@ -2,28 +2,31 @@ name = "harnova-build"
 main = "src/index.js"
 compatibility_date = "2026-06-01"
 
-# The dashboard SPA is served as static assets from ../web/dist.
-# run_worker_first lets /api/* and non-app hostnames hit the worker.
+# IMPORTANT: routes must stay at top level (above any [table] header).
+# In TOML, keys after a [table] header belong to that table — putting
+# routes under [vars] turns it into a useless env var and no routes attach.
+routes = [
+  { pattern = "build.harnova.my/*", zone_name = "harnova.my" },
+  { pattern = "*.harnova.my/*", zone_name = "harnova.my" }
+]
+
+# run_worker_first = true is required: with the default (assets first),
+# index.html + SPA fallback hijack EVERY hostname — including hosted
+# sites on *.harnova.my — before src/index.js can route by hostname.
 [assets]
 directory = "../web/dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
-run_worker_first = ["/api/*"]
+run_worker_first = true
 
 [vars]
 ROOT_DOMAIN = "harnova.my"
 APP_HOST = "build.harnova.my"
 PRICE_SEN = "1000"
 ADMIN_EMAILS = "yashchaal99@gmail.com"        # comma-separated; only these accounts see the admin queue
-PAY_EMAIL = "yashchaal99@gmail.com"              # where users email their payment receipt
+PAY_EMAIL = "yashchaal99@gmail.com"           # where users email their payment receipt
 
-# Routes: the wildcard picks up every hosted site.
-routes = [
-  { pattern = "build.harnova.my/*", zone_name = "harnova.my" },
-  { pattern = "*.harnova.my/*", zone_name = "harnova.my" }
-]
-
-# Secrets (run these once):
+# Secrets (already set in production; re-run only when rotating):
 #   wrangler secret put SUPABASE_URL
 #   wrangler secret put SUPABASE_ANON_KEY
 #   wrangler secret put SUPABASE_SERVICE_KEY

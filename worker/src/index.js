@@ -106,22 +106,24 @@ async function serveSite(env, hostname) {
   } else {
     rows = await sb(env, `sites?custom_domain=eq.${encodeURIComponent(hostname)}&select=html,status,expires_at&limit=1`)
   }
+  const HOLD_HEADERS = { 'content-type': 'text/html; charset=utf-8', 'x-robots-tag': 'noindex', 'x-content-type-options': 'nosniff' }
   const site = rows && rows[0]
   if (!site || site.status === 'draft') {
     return new Response(
       HOLDING_PAGE('This star hasn\u2019t ignited yet', 'No site lives at this address. It could be yours — paste your AI-generated code and go live in seconds.', env.APP_HOST),
-      { status: 404, headers: { 'content-type': 'text/html; charset=utf-8' } })
+      { status: 404, headers: HOLD_HEADERS })
   }
   const expired = site.status === 'expired' || (site.expires_at && new Date(site.expires_at) < new Date())
   if (expired) {
     return new Response(
       HOLDING_PAGE('This site is taking a nap', 'Its hosting period has ended. The owner can renew it from the HarNova Build dashboard to bring it back.', env.APP_HOST),
-      { status: 410, headers: { 'content-type': 'text/html; charset=utf-8' } })
+      { status: 410, headers: HOLD_HEADERS })
   }
   return new Response(site.html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
       'cache-control': 'public, max-age=60',
+      'x-content-type-options': 'nosniff',
       'x-powered-by': 'HarNova Build',
     },
   })
@@ -180,6 +182,9 @@ async function handleApi(req, env, url) {
     if (html.length > MAX_HTML) return j({ error: 'Site is over the 1.5 MB limit. Host large images on a CDN and link them instead.' }, 400, cors)
     const reserved = await sb(env, `reserved_subdomains?name=eq.${subdomain.toLowerCase()}&select=name&limit=1`)
     if (reserved.length) return j({ error: 'That subdomain is reserved.' }, 409, cors)
+    const mine = await sb(env, `sites?user_id=eq.${user.id}&select=id,status`)
+    if (mine.length >= 20) return j({ error: 'Account limit reached (20 sites). Email us if you need more.' }, 429, cors)
+    if (mine.filter(x => x.status === 'draft').length >= 3) return j({ error: 'You have 3 unpaid drafts already — activate or delete one first.' }, 429, cors)
     try {
       const rows = await sb(env, 'sites', {
         method: 'POST',
@@ -206,6 +211,10 @@ async function handleApi(req, env, url) {
     if (!Object.keys(patch).length) return j({ error: 'Nothing to update.' }, 400, cors)
     const rows = await sb(env, `sites?id=eq.${id}&user_id=eq.${user.id}`, { method: 'PATCH', body: patch })
     if (!rows.length) return j({ error: 'Site not found.' }, 404, cors)
+    if (patch.html) {
+      const host = `${rows[0].subdomain}.${env.ROOT_DOMAIN}`
+      await caches.default.delete(new Request(`https://${host}/`, { method: 'GET' })).catch(() => {})
+    }
     return j({ site: rows[0] }, 200, cors)
   }
 
@@ -286,7 +295,13 @@ export default {
       const hit = await cache.match(cacheKey)
       if (hit) return hit
     }
-    const res = await serveSite(env, host)
+    let res
+    try { res = await serveSite(env, host) }
+    catch {
+      res = new Response(
+        HOLDING_PAGE('Brief cosmic turbulence', 'We hit a temporary error serving this site. Refresh in a moment — it usually clears right up.', env.APP_HOST),
+        { status: 503, headers: { 'content-type': 'text/html; charset=utf-8', 'retry-after': '10', 'x-robots-tag': 'noindex' } })
+    }
     if (req.method === 'GET' && res.status === 200) ctx.waitUntil(cache.put(cacheKey, res.clone()))
     return res
   },

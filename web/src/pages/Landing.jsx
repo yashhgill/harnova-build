@@ -142,7 +142,10 @@ export default function Landing({ session, nav }) {
       <footer style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '30px 0' }}>
         <div style={{ ...W, display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', fontSize: '0.8rem', color: '#6E6E85' }}>
           <span>© {new Date().getFullYear()} HarNova Technology</span>
-          <span className="mono">Built under one star <span className="gold-text">✦</span></span>
+          <span style={{ display: 'inline-flex', gap: 18, alignItems: 'center' }}>
+            <a href="/terms" style={{ color: '#8A8AA0' }}>Terms</a>
+            <span className="mono">Built under one star <span className="gold-text">✦</span></span>
+          </span>
         </div>
       </footer>
     </>

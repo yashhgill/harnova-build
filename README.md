@@ -23,6 +23,16 @@ worker/               → the Cloudflare Worker (API + site serving + assets)
 web/                  → Vite/React dashboard (landing, showcase, my-sites, editor)
 ```
 
+## Production status
+
+**Live.** Worker `harnova-build` deployed on zone `harnova.my`; Supabase project `fxlmdbouctcfxqewvcst` with schema applied, Google auth enabled; smoke-tested end-to-end (QR → reference → admin approve → live site).
+
+Two config rules that MUST NOT regress (both already correct in `worker/wrangler.toml`):
+1. `routes = [...]` stays at **top level**, above any `[table]` header — under `[vars]` it silently becomes an env var and no routes attach.
+2. `run_worker_first = true` (not a path list) — otherwise the SPA's `index.html` hijacks every hostname including hosted `*.harnova.my` sites before the Worker's hostname routing runs.
+
+Open item: Google OAuth consent screen is in **Testing** mode — publish it (Google Cloud Console → OAuth consent screen → Publish app) before real customers sign in. Email/profile scopes don't need Google review.
+
 ## Setup (one time)
 
 ### 1. Supabase
@@ -79,4 +89,4 @@ Renewals are the same flow — days stack on top of the current expiry. When you
 - QR transfers are free → RM10 stays RM10. When volume makes manual approval painful, register SSM and swap in a gateway behind the same `payments` table.
 - Expired sites aren't deleted — they show a renewal holding page, and one payment revives them. Lapsed users are your cheapest reactivation channel.
 - Showcase is opt-in (`sites.showcase`), surfaced on the landing page as scaled live iframe previews — social proof straight from production.
-- Abuse guardrails in v1: 1.5 MB HTML cap, reserved subdomain list, content served under *their* subdomain only. Add a takedown flag column when volume grows.
+- Abuse guardrails: 1.5 MB HTML cap, reserved subdomains, 20 sites + 3 unpaid drafts per account, plain-language Terms with acceptable-use at `/terms`, `nosniff` + `noindex` headers on holding pages, branded 503 on serving errors, edge-cache purge on code edits. Takedown = flip the site to `expired` in Supabase (instant, reversible).
