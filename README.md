@@ -31,6 +31,9 @@ Two config rules that MUST NOT regress (both already correct in `worker/wrangler
 1. `routes = [...]` stays at **top level**, above any `[table]` header — under `[vars]` it silently becomes an env var and no routes attach.
 2. `run_worker_first = true` (not a path list) — otherwise the SPA's `index.html` hijacks every hostname including hosted `*.harnova.my` sites before the Worker's hostname routing runs.
 
+### AI builder (Groq)
+Users can describe a site (or a change) in the editor and Groq (`llama-3.3-70b-versatile`) writes/edits the full HTML — 25 generations per user per day (`AI_DAILY_LIMIT`). Setup: run `supabase/migrations/002_ai.sql` in the SQL editor, then `wrangler secret put GROQ_API_KEY` (free key from console.groq.com) and redeploy. Without the key the endpoint degrades gracefully ("not configured yet").
+
 Open item: Google OAuth consent screen is in **Testing** mode — publish it (Google Cloud Console → OAuth consent screen → Publish app) before real customers sign in. Email/profile scopes don't need Google review.
 
 ## Setup (one time)

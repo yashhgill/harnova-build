@@ -10,7 +10,7 @@
  * transfer notes, email/WhatsApp the receipt; an admin approves in-dashboard,
  * which flips the site live and stacks +30 days. No payment gateway needed.
  *
- * Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY
+ * Secrets: SUPABASE_URL, SUPABASE_SERVICE_KEY, SUPABASE_ANON_KEY, GROQ_API_KEY
  * Vars (wrangler.toml): ROOT_DOMAIN, APP_HOST, PRICE_SEN, ADMIN_EMAILS, PAY_EMAIL
  */
 
@@ -223,6 +223,55 @@ async function handleApi(req, env, url) {
     const id = path.split('/')[2]
     await sb(env, `sites?id=eq.${id}&user_id=eq.${user.id}`, { method: 'DELETE' })
     return j({ ok: true }, 200, cors)
+  }
+
+  /* AI website generator — Groq-powered, 25 generations/user/day */
+  if (path === '/ai/generate' && method === 'POST') {
+    if (!env.GROQ_API_KEY) return j({ error: 'AI assistant is not configured yet.' }, 503, cors)
+    const body = await req.json().catch(() => ({}))
+    const prompt = String(body.prompt || '').trim().slice(0, 2000)
+    if (!prompt) return j({ error: 'Describe the site you want first.' }, 400, cors)
+
+    const dayStart = new Date().toISOString().slice(0, 10) + 'T00:00:00Z'
+    const used = await sb(env, `ai_generations?user_id=eq.${user.id}&created_at=gte.${dayStart}&select=id`)
+    const LIMIT = Number(env.AI_DAILY_LIMIT || 25)
+    if (used.length >= LIMIT) return j({ error: `Daily AI limit reached (${LIMIT}). Resets at midnight UTC — or paste code from any AI chat.` }, 429, cors)
+
+    const system = `You are HarNova Build's website generator for Malaysian small businesses.
+Output ONE complete single-file HTML document: <!DOCTYPE html> through </html>, with all CSS in a <style> tag and any JS inline. Rules:
+- Modern, mobile-responsive, polished design; Google Fonts via <link> allowed.
+- No build tools, no external JS frameworks, no localStorage.
+- Images: use CSS gradients/shapes or https://placehold.co placeholders the owner can swap.
+- If the user gives existing code, modify THAT code per their request and return the full updated document.
+- Keep it under 200KB. Include a footer. If contact info is mentioned, add a WhatsApp link (wa.me).
+Return ONLY the raw HTML. No explanations, no markdown fences.`
+
+    const userMsg = body.currentHtml
+      ? `Here is my current site code:\n\n${String(body.currentHtml).slice(0, 60000)}\n\nMy request: ${prompt}`
+      : prompt
+    const messages = [
+      { role: 'system', content: system },
+      ...(Array.isArray(body.history) ? body.history.slice(-6).filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').map(m => ({ role: m.role, content: m.content.slice(0, 4000) })) : []),
+      { role: 'user', content: userMsg },
+    ]
+
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${env.GROQ_API_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: env.GROQ_MODEL || 'llama-3.3-70b-versatile', messages, max_tokens: 8000, temperature: 0.7 }),
+    })
+    const data = await groqRes.json().catch(() => ({}))
+    if (!groqRes.ok) return j({ error: 'The AI is busy right now — try again in a few seconds.' }, 502, cors)
+    let html = data.choices?.[0]?.message?.content || ''
+    const fence = html.match(/```(?:html)?\s*([\s\S]*?)```/)
+    if (fence) html = fence[1]
+    html = html.trim()
+    const doctype = html.search(/<!doctype html>/i)
+    if (doctype > 0) html = html.slice(doctype)
+    if (!/<html[\s>]/i.test(html)) return j({ error: 'The AI returned something odd — try rephrasing your request.' }, 502, cors)
+
+    await sb(env, 'ai_generations', { method: 'POST', body: { user_id: user.id } })
+    return j({ html, remaining: LIMIT - used.length - 1 }, 200, cors)
   }
 
   /* Request a QR payment for a site (first payment or renewal).

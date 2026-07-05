@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Plus, Trash2, RefreshCw, Rocket, Check, X, Pencil, Eye, LogOut, Globe, QrCode, Copy, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, Plus, Trash2, RefreshCw, Rocket, Check, X, Pencil, Eye, LogOut, Globe, QrCode, Copy, ShieldCheck, Sparkles, Send } from 'lucide-react'
 import { supabase, api, daysLeft, NovaMark } from '../lib/core.jsx'
 
 const W = { maxWidth: 1000, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }
@@ -171,7 +171,26 @@ function SiteEditor({ root, site, onClose, onSaved }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
   const [preview, setPreview] = useState(false)
+  const [aiPrompt, setAiPrompt] = useState('')
+  const [aiBusy, setAiBusy] = useState(false)
+  const [aiLog, setAiLog] = useState([]) // {role, content} chat history for context
+  const [aiLeft, setAiLeft] = useState(null)
   const timer = useRef(null)
+
+  const generate = async () => {
+    const prompt = aiPrompt.trim()
+    if (!prompt || aiBusy) return
+    setAiBusy(true); setErr(null)
+    try {
+      const res = await api('/ai/generate', { method: 'POST', body: { prompt, currentHtml: html.trim() || undefined, history: aiLog } })
+      setHtml(res.html)
+      setAiLog(l => [...l.slice(-4), { role: 'user', content: prompt }, { role: 'assistant', content: 'Generated an updated version of the site.' }])
+      setAiLeft(res.remaining)
+      setAiPrompt('')
+      setPreview(true)
+    } catch (e) { setErr(e.message) }
+    setAiBusy(false)
+  }
 
   useEffect(() => {
     if (!isNew) return
@@ -230,6 +249,31 @@ function SiteEditor({ root, site, onClose, onSaved }) {
             )}
           </>
         )}
+
+        <div style={{ marginTop: 22, borderRadius: 14, border: '1px solid rgba(129,140,248,0.35)', background: 'linear-gradient(160deg, rgba(99,102,241,0.1), rgba(34,211,238,0.05))', padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', fontWeight: 600 }}>
+              <Sparkles size={15} className="gold-text" /> AI builder
+            </span>
+            {aiLeft !== null && <span className="mono" style={{ fontSize: '0.68rem', color: '#8A8AA0' }}>{aiLeft} left today</span>}
+          </div>
+          <p style={{ fontSize: '0.8rem', color: '#8A8AA0', marginBottom: 12, fontWeight: 300 }}>
+            {html.trim().length >= 20
+              ? 'Describe a change and the AI edits the code below — "make it dark green", "add a menu section with prices".'
+              : 'No code yet? Describe your site and the AI writes it — "landing page for a nasi lemak stall in Melaka, WhatsApp 0123456789, gold and black".'}
+          </p>
+          <div style={{ display: 'flex', gap: 9 }}>
+            <input className="field" value={aiPrompt} disabled={aiBusy}
+              onChange={e => setAiPrompt(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') generate() }}
+              placeholder={html.trim().length >= 20 ? 'What should change?' : 'Describe your website…'}
+              style={{ flex: 1 }} />
+            <button onClick={generate} disabled={aiBusy || !aiPrompt.trim()} className="nova-btn" aria-label="Generate with AI"
+              style={{ padding: '0 20px', borderRadius: 12, fontWeight: 600, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 118, justifyContent: 'center' }}>
+              {aiBusy ? <span style={{ animation: 'hnPulse 1.1s ease-in-out infinite' }}>✦ Writing…</span> : <><Send size={14} /> Generate</>}
+            </button>
+          </div>
+        </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '20px 0 8px' }}>
           <label style={{ fontSize: '0.85rem', color: '#B9B9CC' }}>

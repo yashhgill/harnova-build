@@ -25,8 +25,11 @@ APP_HOST = "build.harnova.my"
 PRICE_SEN = "1000"
 ADMIN_EMAILS = "yashchaal99@gmail.com"        # comma-separated; only these accounts see the admin queue
 PAY_EMAIL = "yashchaal99@gmail.com"           # where users email their payment receipt
+GROQ_MODEL = "llama-3.3-70b-versatile"
+AI_DAILY_LIMIT = "25"
 
 # Secrets (already set in production; re-run only when rotating):
 #   wrangler secret put SUPABASE_URL
 #   wrangler secret put SUPABASE_ANON_KEY
 #   wrangler secret put SUPABASE_SERVICE_KEY
+#   wrangler secret put GROQ_API_KEY
