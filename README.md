@@ -1,6 +1,6 @@
 # HarNova Build ✦
 
-Paste your AI-generated website. Pay RM10. It's live on `yourname.harnova.my` with SSL — in seconds.
+Paste your AI-generated website. Pay RM300. It's live on `yourname.harnova.my` with SSL — in seconds.
 
 ## How it works
 
@@ -32,7 +32,13 @@ Two config rules that MUST NOT regress (both already correct in `worker/wrangler
 2. `run_worker_first = true` (not a path list) — otherwise the SPA's `index.html` hijacks every hostname including hosted `*.harnova.my` sites before the Worker's hostname routing runs.
 
 ### AI builder (Groq)
-Users can describe a site (or a change) in the editor and Groq (`llama-3.3-70b-versatile`) writes/edits the full HTML — 25 generations per user per day (`AI_DAILY_LIMIT`). Setup: run `supabase/migrations/002_ai.sql` in the SQL editor, then `wrangler secret put GROQ_API_KEY` (free key from console.groq.com) and redeploy. Without the key the endpoint degrades gracefully ("not configured yet").
+Users can describe a site (or a change) in the editor and Groq (`openai/gpt-oss-120b`, `reasoning_effort: medium`) writes/edits the full HTML — 25 generations per signed-in user per day (`AI_DAILY_LIMIT`). The system prompt (`SITE_SYSTEM_PROMPT` in `worker/src/index.js`) pushes for real information architecture, a real type/color system, semantic HTML, SEO meta tags, and a wa.me WhatsApp CTA — not generic template output. Setup: run `supabase/migrations/002_ai.sql` in the SQL editor, then `wrangler secret put GROQ_API_KEY` (free key from console.groq.com) and redeploy. Without the key the endpoint degrades gracefully ("not configured yet").
+
+### Free demo (no sign-in)
+`/demo` lets anyone try the AI generator without an account — one-shot prompts only (no history/edit-in-place), capped at `DEMO_DAILY_LIMIT` (default 5) per visitor per day, tracked by a hashed IP in `demo_generations` (raw IP is never stored). Also shows the live showcase gallery. Setup: run `supabase/migrations/003_contact_and_demo.sql`.
+
+### Contact page
+`/contact` is a form (name, email, message, "custom website + domain" vs "something else") that posts to `POST /api/contact` and lands in `contact_messages` (service-role only — view/manage it from the Supabase Table Editor or SQL editor; there's no dashboard UI for it yet). Also links directly to WhatsApp and email for anyone who doesn't want to wait. Update the placeholder WhatsApp number in `web/src/pages/Contact.jsx` (`WHATSAPP` constant) before shipping.
 
 Open item: Google OAuth consent screen is in **Testing** mode — publish it (Google Cloud Console → OAuth consent screen → Publish app) before real customers sign in. Email/profile scopes don't need Google review.
 
@@ -72,7 +78,7 @@ cd web && npm run dev                  # Vite on :5173, /api proxied to :8787
 
 ## Payment flow (manual QR)
 
-1. User clicks **Pay RM10 · go live** → `POST /api/billing/create` mints a unique reference like `HB-NASI-7K2F` (reused if one is already pending, so no duplicates) and shows the QR modal: your DuitNow QR, the reference to put in transfer notes, and a pre-filled receipt email.
+1. User clicks **Pay RM300 · go live** → `POST /api/billing/create` mints a unique reference like `HB-NASI-7K2F` (reused if one is already pending, so no duplicates) and shows the QR modal: your DuitNow QR, the reference to put in transfer notes, and a pre-filled receipt email.
 2. User pays the QR and emails the receipt with the reference.
 3. You check your banking app, open the dashboard — the **Payment queue** (visible only to `ADMIN_EMAILS`) lists pending references with site + payer info. Click **Approve**.
 4. Approval marks the payment paid, sets the site `status=live`, and stacks `expires_at` +30 days. Reject handles typos/no-shows.
@@ -89,7 +95,7 @@ Renewals are the same flow — days stack on top of the current expiry. When you
 
 ## Business notes
 
-- QR transfers are free → RM10 stays RM10. When volume makes manual approval painful, register SSM and swap in a gateway behind the same `payments` table.
+- QR transfers are free — RM300 stays RM300. When volume makes manual approval painful, register SSM and swap in a gateway behind the same `payments` table.
 - Expired sites aren't deleted — they show a renewal holding page, and one payment revives them. Lapsed users are your cheapest reactivation channel.
 - Showcase is opt-in (`sites.showcase`), surfaced on the landing page as scaled live iframe previews — social proof straight from production.
 - Abuse guardrails: 1.5 MB HTML cap, reserved subdomains, 20 sites + 3 unpaid drafts per account, plain-language Terms with acceptable-use at `/terms`, `nosniff` + `noindex` headers on holding pages, branded 503 on serving errors, edge-cache purge on code edits. Takedown = flip the site to `expired` in Supabase (instant, reversible).

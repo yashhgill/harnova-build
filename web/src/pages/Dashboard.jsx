@@ -50,6 +50,7 @@ export default function Dashboard({ session, nav }) {
             <NovaMark size={21} /> HARNOVA <span className="nova-text">BUILD</span>
           </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} className="hide-mobile" style={{ fontSize: '0.85rem', color: '#8A8AA0' }}>Contact</a>
             <span className="hide-mobile" style={{ fontSize: '0.85rem', color: '#8A8AA0' }}>{session.user.email}</span>
             <button onClick={() => supabase.auth.signOut()} className="glass-btn" aria-label="Sign out" style={{ padding: '8px 12px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.85rem' }}>
               <LogOut size={14} /> <span className="hide-mobile">Sign out</span>
@@ -62,7 +63,7 @@ export default function Dashboard({ session, nav }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 className="display" style={{ fontSize: 'clamp(1.4rem,3vw,1.9rem)', fontWeight: 700 }}>My sites</h1>
-            <p style={{ color: '#8A8AA0', fontSize: '0.92rem', marginTop: 6, fontWeight: 300 }}>RM10 per site per 30 days. Renew anytime — days stack on top.</p>
+            <p style={{ color: '#8A8AA0', fontSize: '0.92rem', marginTop: 6, fontWeight: 300 }}>RM300 per site per 30 days. Renew anytime — days stack on top.</p>
           </div>
           <button onClick={() => { setEditing(null); setCreating(true) }} className="nova-btn" style={{ padding: '12px 24px', borderRadius: 99, fontWeight: 600, fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Plus size={16} /> New site
@@ -76,7 +77,7 @@ export default function Dashboard({ session, nav }) {
             <Rocket size={30} color="#818CF8" />
             <h2 style={{ fontSize: '1.15rem', fontWeight: 600, margin: '16px 0 8px' }}>Launch your first site</h2>
             <p style={{ color: '#8A8AA0', fontSize: '0.94rem', maxWidth: 420, margin: '0 auto', fontWeight: 300 }}>
-              Paste the HTML your AI generated, pick a name, pay RM10 — and it's live with SSL on your own link.
+              Paste the HTML your AI generated, pick a name, pay RM300 — and it's live with SSL on your own link.
             </p>
             <button onClick={() => setCreating(true)} className="nova-btn" style={{ marginTop: 24, padding: '13px 30px', borderRadius: 99, fontWeight: 600 }}>
               Paste my code
@@ -100,7 +101,7 @@ export default function Dashboard({ session, nav }) {
             onSaved={(site, isNew) => {
               setCreating(false); setEditing(null)
               load()
-              if (isNew) { notify('Site saved as draft — one RM10 QR payment and it\u2019s live.'); pay(site) }
+              if (isNew) { notify('Site saved as draft — one RM300 QR payment and it\u2019s live.'); pay(site) }
               else notify('Code updated. Changes appear within a minute.')
             }}
           />
@@ -152,7 +153,7 @@ function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
           <Pencil size={13} /> Edit code
         </button>
         <button onClick={() => onPay(site)} className="nova-btn" style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.83rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {live ? <><RefreshCw size={13} /> Renew +30d</> : <><QrCode size={13} /> Pay RM10 · go live</>}
+          {live ? <><RefreshCw size={13} /> Renew +30d</> : <><QrCode size={13} /> Pay RM300 · go live</>}
         </button>
         <button onClick={() => onDelete(site)} className="glass-btn" aria-label={`Delete ${site.name}`} style={{ padding: '9px 11px', borderRadius: 10 }}>
           <Trash2 size={14} color="#FF7070" />
@@ -300,7 +301,7 @@ function SiteEditor({ root, site, onClose, onSaved }) {
 
         <div style={{ display: 'flex', gap: 12, marginTop: 26, flexWrap: 'wrap' }}>
           <button onClick={save} disabled={!canSave || busy} className="nova-btn" style={{ padding: '13px 28px', borderRadius: 99, fontWeight: 600, fontSize: '0.93rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {busy ? 'Saving…' : isNew ? <><Rocket size={15} /> Save & pay RM10</> : 'Save changes'}
+            {busy ? 'Saving…' : isNew ? <><Rocket size={15} /> Save & pay RM300</> : 'Save changes'}
           </button>
           <button onClick={onClose} className="glass-btn" style={{ padding: '13px 24px', borderRadius: 99, fontSize: '0.93rem' }}>Cancel</button>
         </div>

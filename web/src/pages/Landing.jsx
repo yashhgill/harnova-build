@@ -7,7 +7,7 @@ const W = { maxWidth: 1100, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' 
 const STEPS = [
   { icon: ShieldCheck, title: 'Sign in with Google', text: 'One tap. Your sites live under your account.' },
   { icon: Code2, title: 'Paste or generate code', text: 'Bring HTML from ChatGPT or v0 — or describe your site and our built-in AI writes it for you.' },
-  { icon: Sparkles, title: 'Pay RM10 by QR', text: 'Scan our DuitNow QR with any Malaysian banking app. One payment, one site, 30 days.' },
+  { icon: Sparkles, title: 'Pay RM300 by QR', text: 'Scan our DuitNow QR with any Malaysian banking app. One payment, one site, 30 days.' },
   { icon: Rocket, title: 'You\u2019re live', text: 'yourname.harnova.my with SSL, on Cloudflare\u2019s edge, worldwide.' },
 ]
 
@@ -32,7 +32,8 @@ export default function Landing({ session, nav }) {
           </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
             <a href="#showcase" className="hide-mobile" style={{ fontSize: '0.9rem', color: '#B9B9CC' }}>Showcase</a>
-            <a href="https://harnova.my" className="hide-mobile" style={{ fontSize: '0.9rem', color: '#B9B9CC' }}>Studio</a>
+            <a href="/demo" onClick={e => { e.preventDefault(); nav('/demo') }} className="hide-mobile" style={{ fontSize: '0.9rem', color: '#B9B9CC' }}>Try the AI</a>
+            <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} className="hide-mobile" style={{ fontSize: '0.9rem', color: '#B9B9CC' }}>Contact</a>
             <button onClick={cta} className="nova-btn" style={{ padding: '9px 20px', borderRadius: 99, fontWeight: 600, fontSize: '0.88rem' }}>
               {session ? 'My sites' : 'Get started'}
             </button>
@@ -123,12 +124,20 @@ export default function Landing({ session, nav }) {
           <div className="card" style={{ padding: 'clamp(28px,4vw,50px)', background: 'linear-gradient(160deg, rgba(99,102,241,0.13), rgba(168,85,247,0.06) 55%, rgba(34,211,238,0.05))', textAlign: 'center', position: 'relative', overflow: 'hidden' }}>
             <div aria-hidden="true" style={{ position: 'absolute', top: -70, right: -70, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(245,197,66,0.14), transparent 70%)' }} />
             <div className="mono" style={{ fontSize: '0.72rem', letterSpacing: '0.18em', color: '#B9B9CC' }}>PER SITE · PER MONTH</div>
-            <div className="display" style={{ fontSize: 'clamp(2.6rem,5vw,3.6rem)', fontWeight: 700, margin: '12px 0 4px' }}>RM10</div>
+            <div className="display" style={{ fontSize: 'clamp(2.6rem,5vw,3.6rem)', fontWeight: 700, margin: '12px 0 4px' }}>RM300</div>
             <p style={{ color: '#8A8AA0', fontSize: '0.95rem', fontWeight: 300 }}>30 days of hosting · renew to keep it live · <RefreshCw size={12} style={{ verticalAlign: '-1px' }} /> no lock-in</p>
-            <p style={{ color: '#B9B9CC', fontSize: '0.9rem', marginTop: 12, fontWeight: 300 }}>Want your own <span className="mono">.com</span>? Connect a custom domain — we'll wire it up for you.</p>
-            <button onClick={cta} className="nova-btn" style={{ marginTop: 26, padding: '14px 34px', borderRadius: 99, fontWeight: 600, fontSize: '1rem' }}>
-              Get started — it's one paste away
-            </button>
+            <p style={{ color: '#B9B9CC', fontSize: '0.9rem', marginTop: 12, fontWeight: 300 }}>
+              Want a fully custom website and your own <span className="mono">.com</span> instead of a harnova.my link?{' '}
+              <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} style={{ color: '#22D3EE', fontWeight: 500 }}>Hit us up</a> — we'll build and wire it up for you.
+            </p>
+            <div style={{ marginTop: 26, display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={cta} className="nova-btn" style={{ padding: '14px 34px', borderRadius: 99, fontWeight: 600, fontSize: '1rem' }}>
+                Get started — it's one paste away
+              </button>
+              <button onClick={() => nav('/demo')} className="glass-btn" style={{ padding: '14px 34px', borderRadius: 99, fontWeight: 600, fontSize: '1rem' }}>
+                Try the AI first, free
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -137,6 +146,8 @@ export default function Landing({ session, nav }) {
         <div style={{ ...W, display: 'flex', flexWrap: 'wrap', gap: 12, justifyContent: 'space-between', fontSize: '0.8rem', color: '#6E6E85' }}>
           <span>© {new Date().getFullYear()} HarNova Technology</span>
           <span style={{ display: 'inline-flex', gap: 18, alignItems: 'center' }}>
+            <a href="/demo" onClick={e => { e.preventDefault(); nav('/demo') }} style={{ color: '#8A8AA0' }}>Demo</a>
+            <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} style={{ color: '#8A8AA0' }}>Contact</a>
             <a href="/terms" style={{ color: '#8A8AA0' }}>Terms</a>
             <span className="mono">Built under one star <span className="gold-text">✦</span></span>
           </span>

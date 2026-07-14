@@ -4,6 +4,8 @@ import { supabase, signInWithGoogle, GLOBAL_CSS, NovaMark } from './lib/core.jsx
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Terms from './pages/Terms'
+import Demo from './pages/Demo'
+import Contact from './pages/Contact'
 
 function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
@@ -21,6 +23,8 @@ function App() {
 
   let page
   if (path.startsWith('/terms')) page = <Terms nav={nav} />
+  else if (path.startsWith('/demo')) page = <Demo nav={nav} />
+  else if (path.startsWith('/contact')) page = <Contact nav={nav} />
   else if (path.startsWith('/app')) {
     if (session === undefined) page = <Loading />
     else if (!session) page = <SignIn />

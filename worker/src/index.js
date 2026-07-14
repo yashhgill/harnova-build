@@ -129,6 +129,68 @@ async function serveSite(env, hostname) {
   })
 }
 
+/* ─── AI site generation (Groq) ───────────────────────────────────── */
+async function sha256Hex(text) {
+  const data = new TextEncoder().encode(text)
+  const digest = await crypto.subtle.digest('SHA-256', data)
+  return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+const SITE_SYSTEM_PROMPT = `You are HarNova Build's website generator, writing production-quality single-file websites for small businesses in Malaysia (and elsewhere).
+
+Output ONE complete HTML document: \`<!DOCTYPE html>\` through \`</html>\`. All CSS in a single <style> tag, any JS inline in <script> — no build tools, no external JS frameworks, no localStorage/sessionStorage, no external fonts other than Google Fonts via <link>.
+
+Design like a senior designer, not a template generator:
+- Real information architecture for the business described: a hero that states what the business is and its single strongest hook, then sections that actually make sense for that business (e.g. a restaurant needs a menu with prices, a service business needs "how it works" + testimonials + a clear CTA, a portfolio needs project highlights). Do not pad with generic filler sections that don't fit the request.
+- Typography: pick one display/heading font and one body font from Google Fonts that suit the brand's tone, define a clear type scale (hero, h2, h3, body, small) with consistent spacing — no default browser font sizes.
+- Color: derive a small, cohesive palette (1 primary, 1 accent, neutrals) from what the user describes; ensure text-on-background contrast is comfortably readable (treat WCAG AA as a floor).
+- Layout: mobile-first responsive with real breakpoints (CSS Grid/Flexbox), generous whitespace, consistent border-radius and shadow language throughout — not a mix of styles.
+- Motion: subtle only — hover states, a fade/slide-in on scroll via IntersectionObserver if it fits, nothing gimmicky or distracting.
+- Images: no image generation available, so use tasteful CSS (gradients, shapes, subtle patterns) or https://placehold.co placeholders sized appropriately, captioned so the owner knows what photo to swap in.
+- Always include: a <title> and <meta name="description"> written specifically for this business (never generic), <meta name="viewport" content="width=device-width, initial-scale=1">, and a real footer with the business name and year.
+- If any contact info (phone/WhatsApp) is mentioned or implied, add a clear WhatsApp link using https://wa.me/<digits-only-with-country-code> as a real call-to-action button, not just plain text.
+- Semantic HTML5 (header/nav/main/section/footer, not endless <div> soup). Keep total size under 200KB.
+- If the user supplies existing site code, treat it as the current source of truth: apply their requested change precisely and return the FULL updated document, preserving everything they didn't ask you to change.
+
+Return ONLY the raw HTML document. No explanations, no markdown code fences, no commentary before or after.`
+
+async function generateSiteHtml(env, { prompt, currentHtml, history, demo }) {
+  if (!env.GROQ_API_KEY) { const e = new Error('AI assistant is not configured yet.'); e.status = 503; throw e }
+
+  const userMsg = currentHtml
+    ? `Here is my current site code:\n\n${String(currentHtml).slice(0, 60000)}\n\nMy request: ${prompt}`
+    : prompt
+  const messages = [
+    { role: 'system', content: SITE_SYSTEM_PROMPT },
+    ...(!demo && Array.isArray(history) ? history.slice(-6).filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').map(m => ({ role: m.role, content: m.content.slice(0, 4000) })) : []),
+    { role: 'user', content: userMsg },
+  ]
+
+  const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    method: 'POST',
+    headers: { authorization: `Bearer ${env.GROQ_API_KEY}`, 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: env.GROQ_MODEL || 'openai/gpt-oss-120b',
+      messages,
+      max_completion_tokens: demo ? 6000 : 16000,
+      temperature: 0.6,
+      top_p: 0.95,
+      reasoning_effort: 'medium',
+      include_reasoning: false,
+    }),
+  })
+  const data = await groqRes.json().catch(() => ({}))
+  if (!groqRes.ok) { const e = new Error('The AI is busy right now — try again in a few seconds.'); e.status = 502; throw e }
+  let html = data.choices?.[0]?.message?.content || ''
+  const fence = html.match(/```(?:html)?\s*([\s\S]*?)```/)
+  if (fence) html = fence[1]
+  html = html.trim()
+  const doctype = html.search(/<!doctype html>/i)
+  if (doctype > 0) html = html.slice(doctype)
+  if (!/<html[\s>]/i.test(html)) { const e = new Error('The AI returned something odd — try rephrasing your request.'); e.status = 502; throw e }
+  return html
+}
+
 /* ─── API routes ──────────────────────────────────────────────────── */
 async function handleApi(req, env, url) {
   const path = url.pathname.replace(/^\/api/, '')
@@ -160,6 +222,43 @@ async function handleApi(req, env, url) {
     ])
     const available = taken.length === 0 && reserved.length === 0
     return j({ available, reason: available ? null : 'taken' }, 200, cors)
+  }
+
+  /* Public, no-signup AI demo — one-shot only (no history/currentHtml), IP-rate-limited */
+  if (path === '/demo/generate' && method === 'POST') {
+    const ip = req.headers.get('cf-connecting-ip') || 'unknown'
+    const ipHash = await sha256Hex(ip)
+    const dayStart = new Date().toISOString().slice(0, 10) + 'T00:00:00Z'
+    const used = await sb(env, `demo_generations?ip_hash=eq.${ipHash}&created_at=gte.${dayStart}&select=id`)
+    const LIMIT = Number(env.DEMO_DAILY_LIMIT || 5)
+    if (used.length >= LIMIT) return j({ error: `Free demo limit reached for today (${LIMIT} per visitor). Sign in to keep generating — 25/day, free.` }, 429, cors)
+
+    const body = await req.json().catch(() => ({}))
+    const prompt = String(body.prompt || '').trim().slice(0, 600)
+    if (!prompt) return j({ error: 'Describe the site you want first.' }, 400, cors)
+
+    let html
+    try {
+      html = await generateSiteHtml(env, { prompt, demo: true })
+    } catch (e) { return j({ error: e.message }, e.status || 502, cors) }
+
+    await sb(env, 'demo_generations', { method: 'POST', body: { ip_hash: ipHash } })
+    return j({ html, remaining: LIMIT - used.length - 1 }, 200, cors)
+  }
+
+  /* Public: contact form (custom website / custom domain enquiries, general contact) */
+  if (path === '/contact' && method === 'POST') {
+    const body = await req.json().catch(() => ({}))
+    const name = String(body.name || '').trim().slice(0, 120)
+    const email = String(body.email || '').trim().slice(0, 200)
+    const message = String(body.message || '').trim().slice(0, 4000)
+    if (!name || !email || !message) return j({ error: 'Name, email and message are all required.' }, 400, cors)
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return j({ error: 'That email address doesn\u2019t look right.' }, 400, cors)
+    await sb(env, 'contact_messages', {
+      method: 'POST',
+      body: { name, email, message, interest: (body.interest === 'custom_domain' ? 'custom_domain' : 'general') },
+    })
+    return j({ ok: true }, 200, cors)
   }
 
   /* ── Everything below requires a signed-in user ── */
@@ -227,7 +326,6 @@ async function handleApi(req, env, url) {
 
   /* AI website generator — Groq-powered, 25 generations/user/day */
   if (path === '/ai/generate' && method === 'POST') {
-    if (!env.GROQ_API_KEY) return j({ error: 'AI assistant is not configured yet.' }, 503, cors)
     const body = await req.json().catch(() => ({}))
     const prompt = String(body.prompt || '').trim().slice(0, 2000)
     if (!prompt) return j({ error: 'Describe the site you want first.' }, 400, cors)
@@ -237,42 +335,15 @@ async function handleApi(req, env, url) {
     const LIMIT = Number(env.AI_DAILY_LIMIT || 25)
     if (used.length >= LIMIT) return j({ error: `Daily AI limit reached (${LIMIT}). Resets at midnight UTC — or paste code from any AI chat.` }, 429, cors)
 
-    const system = `You are HarNova Build's website generator for Malaysian small businesses.
-Output ONE complete single-file HTML document: <!DOCTYPE html> through </html>, with all CSS in a <style> tag and any JS inline. Rules:
-- Modern, mobile-responsive, polished design; Google Fonts via <link> allowed.
-- No build tools, no external JS frameworks, no localStorage.
-- Images: use CSS gradients/shapes or https://placehold.co placeholders the owner can swap.
-- If the user gives existing code, modify THAT code per their request and return the full updated document.
-- Keep it under 200KB. Include a footer. If contact info is mentioned, add a WhatsApp link (wa.me).
-Return ONLY the raw HTML. No explanations, no markdown fences.`
-
-    const userMsg = body.currentHtml
-      ? `Here is my current site code:\n\n${String(body.currentHtml).slice(0, 60000)}\n\nMy request: ${prompt}`
-      : prompt
-    const messages = [
-      { role: 'system', content: system },
-      ...(Array.isArray(body.history) ? body.history.slice(-6).filter(m => m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string').map(m => ({ role: m.role, content: m.content.slice(0, 4000) })) : []),
-      { role: 'user', content: userMsg },
-    ]
-
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${env.GROQ_API_KEY}`, 'content-type': 'application/json' },
-      body: JSON.stringify({ model: env.GROQ_MODEL || 'llama-3.3-70b-versatile', messages, max_tokens: 8000, temperature: 0.7 }),
-    })
-    const data = await groqRes.json().catch(() => ({}))
-    if (!groqRes.ok) return j({ error: 'The AI is busy right now — try again in a few seconds.' }, 502, cors)
-    let html = data.choices?.[0]?.message?.content || ''
-    const fence = html.match(/```(?:html)?\s*([\s\S]*?)```/)
-    if (fence) html = fence[1]
-    html = html.trim()
-    const doctype = html.search(/<!doctype html>/i)
-    if (doctype > 0) html = html.slice(doctype)
-    if (!/<html[\s>]/i.test(html)) return j({ error: 'The AI returned something odd — try rephrasing your request.' }, 502, cors)
+    let html
+    try {
+      html = await generateSiteHtml(env, { prompt, currentHtml: body.currentHtml, history: body.history })
+    } catch (e) { return j({ error: e.message }, e.status || 502, cors) }
 
     await sb(env, 'ai_generations', { method: 'POST', body: { user_id: user.id } })
     return j({ html, remaining: LIMIT - used.length - 1 }, 200, cors)
   }
+
 
   /* Request a QR payment for a site (first payment or renewal).
      Reuses an existing pending reference so users don't get duplicates. */
@@ -286,7 +357,7 @@ Return ONLY the raw HTML. No explanations, no markdown fences.`
     if (!payment) {
       const rows = await sb(env, 'payments', {
         method: 'POST',
-        body: { user_id: user.id, site_id: site.id, reference: makeReference(site.subdomain), amount_sen: Number(env.PRICE_SEN || 1000), status: 'pending' },
+        body: { user_id: user.id, site_id: site.id, reference: makeReference(site.subdomain), amount_sen: Number(env.PRICE_SEN || 30000), status: 'pending' },
       })
       payment = rows[0]
     }
