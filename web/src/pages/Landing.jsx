@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Sparkles, Code2, Rocket, ShieldCheck, RefreshCw, Globe, Check } from 'lucide-react'
+import { ArrowUpRight, Sparkles, Code2, Rocket, ShieldCheck, RefreshCw, Globe, Check, Moon, Sun } from 'lucide-react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { NovaMark } from '../lib/core.jsx'
+import { NovaMark, getInitialTheme, applyTheme } from '../lib/core.jsx'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -34,6 +34,7 @@ const MOCK_HTML = `<!doctype html><html><head><style>
 export default function Landing({ session, nav }) {
   const [showcase, setShowcase] = useState([])
   const [root, setRoot] = useState('harnova.my')
+  const [theme, setTheme] = useState(getInitialTheme)
   const scopeRef = useRef(null)
 
   useEffect(() => {
@@ -41,6 +42,9 @@ export default function Landing({ session, nav }) {
       .then(d => { setShowcase(d.sites || []); if (d.root) setRoot(d.root) })
       .catch(() => {})
   }, [])
+
+  useEffect(() => { applyTheme(theme) }, [theme])
+  const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -83,7 +87,7 @@ export default function Landing({ session, nav }) {
 
   return (
     <div ref={scopeRef}>
-      <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '15px 0', background: 'rgba(250,250,252,0.78)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)' }}>
+      <nav className="nav-blur" style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100, padding: '15px 0', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)' }}>
         <div style={{ ...W, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <a href="/" className="display" style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: '0.95rem' }}>
             <NovaMark size={22} /> HARNOVA <span className="nova-text">BUILD</span>
@@ -92,6 +96,10 @@ export default function Landing({ session, nav }) {
             <a href="#showcase" className="hide-mobile ink-soft" style={{ fontSize: '0.9rem' }}>Showcase</a>
             <a href="/demo" onClick={e => { e.preventDefault(); nav('/demo') }} className="hide-mobile ink-soft" style={{ fontSize: '0.9rem' }}>Try the AI</a>
             <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} className="hide-mobile ink-soft" style={{ fontSize: '0.9rem' }}>Contact</a>
+            <button onClick={toggleTheme} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              className="glass-btn" style={{ width: 36, height: 36, borderRadius: 99, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <button onClick={cta} className="nova-btn" style={{ padding: '9px 20px', borderRadius: 99, fontWeight: 600, fontSize: '0.88rem' }}>
               {session ? 'My sites' : 'Get started'}
             </button>

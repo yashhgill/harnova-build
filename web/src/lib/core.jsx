@@ -34,6 +34,24 @@ export const daysLeft = expiresAt => {
 }
 
 // ---------------------------------------------------------------------------
+// Theme (light/dark) — persisted in localStorage, applied via data-theme on <html>.
+// ---------------------------------------------------------------------------
+const THEME_KEY = 'hn-theme'
+
+export function getInitialTheme() {
+  try {
+    const saved = localStorage.getItem(THEME_KEY)
+    if (saved === 'light' || saved === 'dark') return saved
+  } catch {}
+  return 'light'
+}
+
+export function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme)
+  try { localStorage.setItem(THEME_KEY, theme) } catch {}
+}
+
+// ---------------------------------------------------------------------------
 // HarNova design system — light, premium SaaS aesthetic (emergent.sh-style).
 // Design tokens are CSS custom properties on :root so every page/component
 // can reference var(--...) instead of hardcoding colors.
@@ -83,6 +101,48 @@ export const GLOBAL_CSS = `
     /* Dark surfaces still used for the app-shell nav / hero accents */
     --ink-bg: #0B0B14;
   }
+
+  /* Dark mode — the original HarNova dark palette, restored as a toggle-able variant. */
+  [data-theme="dark"] {
+    --bg:            #04040A;
+    --bg-alt:        #08080F;
+    --surface:       #0B0B14;
+    --surface-sunken:#08080F;
+    --border:        rgba(255,255,255,0.09);
+    --border-strong: rgba(255,255,255,0.16);
+
+    --ink:           #F4F4FA;
+    --ink-soft:      #B9B9CC;
+    --ink-faint:     #8A8AA0;
+
+    --indigo:        #818CF8;
+    --violet:        #C084FC;
+    --cyan:          #22D3EE;
+    --gold:          #F5C542;
+    --brand-grad:    linear-gradient(100deg, #6366F1 0%, #A855F7 55%, #22D3EE 130%);
+
+    --success:       #39FF14;
+    --danger:        #FF7070;
+    --warning:       #F5C542;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 8px 28px rgba(0,0,0,0.4);
+    --shadow-lg: 0 16px 44px rgba(0,0,0,0.55);
+    --shadow-glow: 0 8px 28px rgba(124,93,250,0.32);
+  }
+  [data-theme="dark"] .mesh-bg {
+    background:
+      radial-gradient(60% 50% at 15% 10%, rgba(99,102,241,0.15), transparent 60%),
+      radial-gradient(50% 45% at 85% 15%, rgba(34,211,238,0.12), transparent 60%),
+      radial-gradient(60% 60% at 50% 100%, rgba(168,85,247,0.10), transparent 60%);
+  }
+  [data-theme="dark"] .glass-btn { background: rgba(255,255,255,0.04); }
+  [data-theme="dark"] ::selection { background: #6366F1; }
+
+  .nav-blur { background: rgba(250,250,252,0.78); }
+  [data-theme="dark"] .nav-blur { background: rgba(4,4,10,0.8); }
+
+  html, body { transition: background-color .3s ease, color .3s ease; }
 
   body { background: var(--bg); color: var(--ink); font-family: 'Outfit', sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
   ::selection { background: var(--indigo); color: #fff; }
