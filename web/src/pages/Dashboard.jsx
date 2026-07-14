@@ -44,7 +44,7 @@ export default function Dashboard({ session, nav }) {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, padding: '14px 0', background: 'rgba(250,250,252,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)' }}>
+      <nav className="nav-blur" style={{ position: 'sticky', top: 0, zIndex: 100, padding: '14px 0', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)' }}>
         <div style={{ ...W, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <a href="/" className="display" style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: '0.92rem' }}>
             <NovaMark size={21} /> HARNOVA <span className="nova-text">BUILD</span>

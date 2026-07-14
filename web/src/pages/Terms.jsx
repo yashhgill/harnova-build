@@ -20,11 +20,11 @@ export default function Terms({ nav }) {
           <NovaMark size={22} /> HARNOVA <span className="nova-text">BUILD</span>
         </a>
         <h1 className="display" style={{ fontSize: 'clamp(1.6rem,4vw,2.3rem)', fontWeight: 700, margin: '34px 0 10px' }}>Terms of service</h1>
-        <p style={{ color: '#8A8AA0', fontSize: '0.9rem' }}>Plain-language version — using HarNova Build means you agree to this.</p>
+        <p className="ink-soft" style={{ fontSize: '0.9rem' }}>Plain-language version — using HarNova Build means you agree to this.</p>
         {SECTIONS.map(([h, t]) => (
           <section key={h} style={{ marginTop: 34 }}>
             <h2 style={{ fontSize: '1.05rem', fontWeight: 600, marginBottom: 10 }}><span className="gold-text">✦</span> {h}</h2>
-            <p style={{ color: '#B9B9CC', fontSize: '0.95rem', lineHeight: 1.75, fontWeight: 300 }}>{t}</p>
+            <p className="ink-soft" style={{ fontSize: '0.95rem', lineHeight: 1.75, fontWeight: 400 }}>{t}</p>
           </section>
         ))}
         <button onClick={() => nav('/')} className="glass-btn" style={{ marginTop: 44, padding: '12px 26px', borderRadius: 99, fontWeight: 600, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>

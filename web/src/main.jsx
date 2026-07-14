@@ -53,7 +53,7 @@ function SignIn() {
       <div className="card rise" style={{ padding: 'clamp(30px,5vw,48px)', maxWidth: 440, width: '100%', textAlign: 'center' }}>
         <NovaMark size={40} />
         <h1 className="display" style={{ fontSize: '1.5rem', fontWeight: 700, margin: '20px 0 10px' }}>Sign in to HarNova Build</h1>
-        <p style={{ color: '#8A8AA0', fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 28 }}>
+        <p className="ink-soft" style={{ fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 28 }}>
           One tap with Google — then paste your code and go live.
         </p>
         <button onClick={signInWithGoogle} className="glass-btn" style={{ width: '100%', padding: '14px 20px', borderRadius: 12, fontWeight: 600, fontSize: '0.98rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
@@ -65,7 +65,7 @@ function SignIn() {
           </svg>
           Continue with Google
         </button>
-        <a href="/" style={{ display: 'inline-block', marginTop: 22, fontSize: '0.85rem', color: '#6E6E85' }}>← Back to home</a>
+        <a href="/" className="ink-faint" style={{ display: 'inline-block', marginTop: 22, fontSize: '0.85rem' }}>← Back to home</a>
       </div>
     </div>
   )
