@@ -33,30 +33,99 @@ export const daysLeft = expiresAt => {
   return Math.max(0, Math.ceil((new Date(expiresAt) - Date.now()) / 86400000))
 }
 
+// ---------------------------------------------------------------------------
+// HarNova design system — light, premium SaaS aesthetic (emergent.sh-style).
+// Design tokens are CSS custom properties on :root so every page/component
+// can reference var(--...) instead of hardcoding colors.
+// ---------------------------------------------------------------------------
 export const GLOBAL_CSS = `
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { scroll-behavior: smooth; }
-  body { background: #04040A; color: #F4F4FA; font-family: 'Outfit', sans-serif; overflow-x: hidden; }
-  ::selection { background: #6366F1; color: #fff; }
+
+  :root {
+    /* Surfaces */
+    --bg:            #FAFAFC;
+    --bg-alt:        #F3F3F8;
+    --surface:       #FFFFFF;
+    --surface-sunken:#F6F6FA;
+    --border:        #E7E7EF;
+    --border-strong: #D7D7E4;
+
+    /* Text */
+    --ink:           #14141F;
+    --ink-soft:      #4A4A5C;
+    --ink-faint:     #8A8AA0;
+
+    /* Brand */
+    --indigo:        #6D5AFE;
+    --violet:        #9B6BFF;
+    --cyan:          #17B6C4;
+    --gold:          #C8912A;
+    --brand-grad:    linear-gradient(100deg, var(--indigo) 0%, var(--violet) 55%, var(--cyan) 130%);
+
+    /* Feedback */
+    --success:       #1D9A6C;
+    --danger:        #D6483A;
+    --warning:       #C8912A;
+
+    /* Elevation */
+    --shadow-sm: 0 1px 2px rgba(20,20,31,0.05), 0 1px 1px rgba(20,20,31,0.03);
+    --shadow-md: 0 4px 16px rgba(20,20,31,0.06), 0 2px 6px rgba(20,20,31,0.04);
+    --shadow-lg: 0 16px 48px rgba(20,20,31,0.10), 0 4px 14px rgba(20,20,31,0.05);
+    --shadow-glow: 0 8px 32px rgba(109,90,254,0.22);
+
+    /* Radii + spacing scale */
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 20px;
+    --r-xl: 28px;
+
+    /* Dark surfaces still used for the app-shell nav / hero accents */
+    --ink-bg: #0B0B14;
+  }
+
+  body { background: var(--bg); color: var(--ink); font-family: 'Outfit', sans-serif; overflow-x: hidden; -webkit-font-smoothing: antialiased; }
+  ::selection { background: var(--indigo); color: #fff; }
   a { text-decoration: none; color: inherit; }
   button { font-family: inherit; cursor: pointer; }
   input, textarea { font-family: inherit; }
-  .display { font-family: 'Unbounded', sans-serif; }
+  .display { font-family: 'Unbounded', sans-serif; letter-spacing: -0.01em; }
   .mono { font-family: 'JetBrains Mono', monospace; }
-  .nova-text { background: linear-gradient(100deg,#818CF8 0%,#C084FC 45%,#22D3EE 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .gold-text { color: #F5C542; }
-  .nova-btn { background: linear-gradient(100deg,#6366F1,#A855F7 55%,#22D3EE 130%); box-shadow: 0 8px 28px rgba(124,93,250,0.32); border: none; color: #fff; transition: all .3s cubic-bezier(.22,1,.36,1); }
-  .nova-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(124,93,250,0.5); }
-  .nova-btn:disabled { opacity: .55; cursor: not-allowed; }
-  .glass-btn { border: 1px solid rgba(255,255,255,0.16); background: rgba(255,255,255,0.04); color: #F4F4FA; transition: all .3s ease; }
-  .glass-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: rgba(255,255,255,0.3); }
-  .card { border-radius: 18px; border: 1px solid rgba(255,255,255,0.09); background: linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012)); }
-  .field { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.13); border-radius: 12px; color: #F4F4FA; padding: 13px 16px; font-size: .95rem; outline: none; transition: border-color .25s ease; }
-  .field:focus { border-color: #818CF8; }
-  .field::placeholder { color: #6E6E85; }
+
+  .nova-text { background: var(--brand-grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .gold-text { color: var(--gold); }
+  .ink-soft { color: var(--ink-soft); }
+  .ink-faint { color: var(--ink-faint); }
+
+  .nova-btn { background: var(--brand-grad); box-shadow: var(--shadow-glow); border: none; color: #fff; transition: transform .35s cubic-bezier(.22,1,.36,1), box-shadow .35s cubic-bezier(.22,1,.36,1); }
+  .nova-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 40px rgba(109,90,254,0.32); }
+  .nova-btn:active:not(:disabled) { transform: translateY(0); }
+  .nova-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  .glass-btn { border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink); transition: all .3s ease; }
+  .glass-btn:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--indigo); box-shadow: var(--shadow-md); }
+
+  .card { border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface); box-shadow: var(--shadow-sm); transition: box-shadow .3s ease, transform .3s ease; }
+  .card-hover:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); }
+
+  .field { width: 100%; background: var(--surface); border: 1.5px solid var(--border-strong); border-radius: var(--r-sm); color: var(--ink); padding: 13px 16px; font-size: .95rem; outline: none; transition: border-color .25s ease, box-shadow .25s ease; }
+  .field:focus { border-color: var(--indigo); box-shadow: 0 0 0 4px rgba(109,90,254,0.12); }
+  .field::placeholder { color: var(--ink-faint); }
+
   @keyframes hnRise { from { opacity: 0; transform: translateY(24px) } to { opacity: 1; transform: translateY(0) } }
   @keyframes hnPulse { 0%,100% { opacity: 1 } 50% { opacity: .5 } }
+  @keyframes hnFloat { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
   .rise { animation: hnRise .8s cubic-bezier(.22,1,.36,1) both; }
+  .float { animation: hnFloat 6s ease-in-out infinite; }
+
+  /* Utility: subtle grain/gradient mesh backdrop for hero sections */
+  .mesh-bg {
+    background:
+      radial-gradient(60% 50% at 15% 10%, rgba(109,90,254,0.10), transparent 60%),
+      radial-gradient(50% 45% at 85% 15%, rgba(23,182,196,0.10), transparent 60%),
+      radial-gradient(60% 60% at 50% 100%, rgba(155,107,255,0.08), transparent 60%);
+  }
+
   @media (max-width: 768px) {
     .grid-2, .grid-3 { grid-template-columns: 1fr !important; }
     .hide-mobile { display: none !important; }
@@ -64,7 +133,13 @@ export const GLOBAL_CSS = `
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .15s !important; }
   }
-  :focus-visible { outline: 2px solid #22D3EE; outline-offset: 3px; border-radius: 4px; }
+  :focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; border-radius: 4px; }
+
+  /* Scrollbar polish */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ink-faint); }
 `
 
 export function NovaMark({ size = 24 }) {
@@ -76,7 +151,7 @@ export function NovaMark({ size = 24 }) {
         </linearGradient>
       </defs>
       <path d="M20 1 C21.8 12.5 27.5 18.2 39 20 C27.5 21.8 21.8 27.5 20 39 C18.2 27.5 12.5 21.8 1 20 C12.5 18.2 18.2 12.5 20 1 Z" fill="url(#ng)" />
-      <circle cx="20" cy="20" r="3.2" fill="#fff" opacity="0.9" />
+      <circle cx="20" cy="20" r="3.2" fill="#fff" opacity="0.95" />
     </svg>
   )
 }

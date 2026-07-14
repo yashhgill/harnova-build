@@ -43,15 +43,15 @@ export default function Dashboard({ session, nav }) {
   }
 
   return (
-    <>
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, padding: '14px 0', background: 'rgba(4,4,10,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      <nav style={{ position: 'sticky', top: 0, zIndex: 100, padding: '14px 0', background: 'rgba(250,250,252,0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid var(--border)' }}>
         <div style={{ ...W, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <a href="/" className="display" style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 700, fontSize: '0.92rem' }}>
             <NovaMark size={21} /> HARNOVA <span className="nova-text">BUILD</span>
           </a>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} className="hide-mobile" style={{ fontSize: '0.85rem', color: '#8A8AA0' }}>Contact</a>
-            <span className="hide-mobile" style={{ fontSize: '0.85rem', color: '#8A8AA0' }}>{session.user.email}</span>
+            <a href="/contact" onClick={e => { e.preventDefault(); nav('/contact') }} className="hide-mobile ink-soft" style={{ fontSize: '0.85rem' }}>Contact</a>
+            <span className="hide-mobile ink-soft" style={{ fontSize: '0.85rem' }}>{session.user.email}</span>
             <button onClick={() => supabase.auth.signOut()} className="glass-btn" aria-label="Sign out" style={{ padding: '8px 12px', borderRadius: 10, display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.85rem' }}>
               <LogOut size={14} /> <span className="hide-mobile">Sign out</span>
             </button>
@@ -63,7 +63,7 @@ export default function Dashboard({ session, nav }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 className="display" style={{ fontSize: 'clamp(1.4rem,3vw,1.9rem)', fontWeight: 700 }}>My sites</h1>
-            <p style={{ color: '#8A8AA0', fontSize: '0.92rem', marginTop: 6, fontWeight: 300 }}>RM300 per site per 30 days. Renew anytime — days stack on top.</p>
+            <p className="ink-soft" style={{ fontSize: '0.92rem', marginTop: 6, fontWeight: 400 }}>RM300 per site per 30 days. Renew anytime — days stack on top.</p>
           </div>
           <button onClick={() => { setEditing(null); setCreating(true) }} className="nova-btn" style={{ padding: '12px 24px', borderRadius: 99, fontWeight: 600, fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Plus size={16} /> New site
@@ -74,9 +74,9 @@ export default function Dashboard({ session, nav }) {
           <div style={{ padding: 80, textAlign: 'center', animation: 'hnPulse 1.6s ease-in-out infinite' }}><NovaMark size={34} /></div>
         ) : sites.length === 0 && !creating ? (
           <div className="card" style={{ marginTop: 34, padding: 'clamp(34px,5vw,60px)', textAlign: 'center' }}>
-            <Rocket size={30} color="#818CF8" />
+            <Rocket size={30} color="var(--indigo)" />
             <h2 style={{ fontSize: '1.15rem', fontWeight: 600, margin: '16px 0 8px' }}>Launch your first site</h2>
-            <p style={{ color: '#8A8AA0', fontSize: '0.94rem', maxWidth: 420, margin: '0 auto', fontWeight: 300 }}>
+            <p className="ink-soft" style={{ fontSize: '0.94rem', maxWidth: 420, margin: '0 auto', fontWeight: 400 }}>
               Paste the HTML your AI generated, pick a name, pay RM300 — and it's live with SSL on your own link.
             </p>
             <button onClick={() => setCreating(true)} className="nova-btn" style={{ marginTop: 24, padding: '13px 30px', borderRadius: 99, fontWeight: 600 }}>
@@ -101,7 +101,7 @@ export default function Dashboard({ session, nav }) {
             onSaved={(site, isNew) => {
               setCreating(false); setEditing(null)
               load()
-              if (isNew) { notify('Site saved as draft — one RM300 QR payment and it\u2019s live.'); pay(site) }
+              if (isNew) { notify('Site saved as draft — one RM300 QR payment and it’s live.'); pay(site) }
               else notify('Code updated. Changes appear within a minute.')
             }}
           />
@@ -109,11 +109,11 @@ export default function Dashboard({ session, nav }) {
       </main>
 
       {toast && (
-        <div role="status" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 300, padding: '13px 22px', borderRadius: 12, background: '#0B0B14', border: `1px solid ${toast.ok ? 'rgba(57,255,20,0.4)' : 'rgba(255,80,80,0.45)'}`, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 9, boxShadow: '0 16px 44px rgba(0,0,0,0.55)' }}>
-          {toast.ok ? <Check size={15} color="#39FF14" /> : <X size={15} color="#FF5050" />} {toast.msg}
+        <div role="status" style={{ position: 'fixed', bottom: 24, left: '50%', transform: 'translateX(-50%)', zIndex: 300, padding: '13px 22px', borderRadius: 12, background: 'var(--surface)', border: `1px solid ${toast.ok ? 'rgba(29,154,108,0.35)' : 'rgba(214,72,58,0.35)'}`, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 9, boxShadow: 'var(--shadow-lg)' }}>
+          {toast.ok ? <Check size={15} color="var(--success)" /> : <X size={15} color="var(--danger)" />} {toast.msg}
         </div>
       )}
-    </>
+    </div>
   )
 }
 
@@ -122,10 +122,10 @@ function StatusPill({ site }) {
   const live = site.status === 'live' && d > 0
   const expired = site.status === 'expired' || (site.expires_at && d === 0)
   const [bg, bd, fg, label] = live
-    ? ['rgba(57,255,20,0.08)', 'rgba(57,255,20,0.35)', '#39FF14', `Live · ${d}d left`]
+    ? ['rgba(29,154,108,0.08)', 'rgba(29,154,108,0.3)', 'var(--success)', `Live · ${d}d left`]
     : expired
-      ? ['rgba(255,80,80,0.08)', 'rgba(255,80,80,0.35)', '#FF7070', 'Expired']
-      : ['rgba(245,197,66,0.08)', 'rgba(245,197,66,0.35)', '#F5C542', 'Draft — not live yet']
+      ? ['rgba(214,72,58,0.08)', 'rgba(214,72,58,0.3)', 'var(--danger)', 'Expired']
+      : ['rgba(200,145,42,0.08)', 'rgba(200,145,42,0.3)', 'var(--warning)', 'Draft — not live yet']
   return <span className="mono" style={{ fontSize: '0.68rem', padding: '4px 11px', borderRadius: 99, background: bg, border: `1px solid ${bd}`, color: fg, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
@@ -133,20 +133,20 @@ function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
   const url = `https://${site.subdomain}.${root}`
   const live = site.status === 'live' && daysLeft(site.expires_at) > 0
   return (
-    <div className="card" style={{ padding: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
+    <div className="card card-hover" style={{ padding: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
       <div style={{ flex: '1 1 240px', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <span style={{ fontWeight: 600, fontSize: '1rem' }}>{site.name}</span>
           <StatusPill site={site} />
         </div>
-        <a href={live ? url : undefined} target="_blank" rel="noreferrer" className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: live ? '#22D3EE' : '#6E6E85', marginTop: 7 }}>
+        <a href={live ? url : undefined} target="_blank" rel="noreferrer" className="mono" style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '0.78rem', color: live ? 'var(--cyan)' : 'var(--ink-faint)', marginTop: 7 }}>
           <Globe size={12} /> {site.subdomain}.{root} {live && <ArrowUpRight size={12} />}
         </a>
-        {site.custom_domain && <div className="mono" style={{ fontSize: '0.78rem', color: '#8A8AA0', marginTop: 4 }}>+ {site.custom_domain}</div>}
+        {site.custom_domain && <div className="mono ink-soft" style={{ fontSize: '0.78rem', marginTop: 4 }}>+ {site.custom_domain}</div>}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', color: '#8A8AA0', cursor: 'pointer', marginRight: 4 }}>
-          <input type="checkbox" checked={site.showcase} onChange={() => onShowcase(site)} style={{ accentColor: '#818CF8', width: 15, height: 15 }} />
+        <label className="ink-soft" style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: '0.8rem', cursor: 'pointer', marginRight: 4 }}>
+          <input type="checkbox" checked={site.showcase} onChange={() => onShowcase(site)} style={{ accentColor: 'var(--indigo)', width: 15, height: 15 }} />
           <Eye size={13} /> Showcase
         </label>
         <button onClick={onEdit} className="glass-btn" style={{ padding: '9px 14px', borderRadius: 10, fontSize: '0.83rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -156,7 +156,7 @@ function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
           {live ? <><RefreshCw size={13} /> Renew +30d</> : <><QrCode size={13} /> Pay RM300 · go live</>}
         </button>
         <button onClick={() => onDelete(site)} className="glass-btn" aria-label={`Delete ${site.name}`} style={{ padding: '9px 11px', borderRadius: 10 }}>
-          <Trash2 size={14} color="#FF7070" />
+          <Trash2 size={14} color="var(--danger)" />
         </button>
       </div>
     </div>
@@ -171,25 +171,43 @@ function SiteEditor({ root, site, onClose, onSaved }) {
   const [avail, setAvail] = useState(null) // null | 'checking' | true | false
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState(null)
-  const [preview, setPreview] = useState(false)
+  const [showCode, setShowCode] = useState(false)
+  const [chat, setChat] = useState([]) // {role, content} persisted (existing site) or session-only (new site)
   const [aiPrompt, setAiPrompt] = useState('')
   const [aiBusy, setAiBusy] = useState(false)
-  const [aiLog, setAiLog] = useState([]) // {role, content} chat history for context
   const [aiLeft, setAiLeft] = useState(null)
   const timer = useRef(null)
+  const chatEndRef = useRef(null)
+
+  // Load persisted chat history when editing an existing site.
+  useEffect(() => {
+    if (isNew || !site) return
+    api(`/sites/${site.id}/messages`).then(d => setChat(d.messages || [])).catch(() => {})
+  }, [isNew, site])
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [chat.length, aiBusy])
 
   const generate = async () => {
     const prompt = aiPrompt.trim()
     if (!prompt || aiBusy) return
     setAiBusy(true); setErr(null)
+    setChat(c => [...c, { role: 'user', content: prompt }])
+    setAiPrompt('')
     try {
-      const res = await api('/ai/generate', { method: 'POST', body: { prompt, currentHtml: html.trim() || undefined, history: aiLog } })
+      const res = await api('/ai/generate', {
+        method: 'POST',
+        body: { prompt, currentHtml: html.trim() || undefined, history: isNew ? chat : undefined, site_id: site?.id },
+      })
       setHtml(res.html)
-      setAiLog(l => [...l.slice(-4), { role: 'user', content: prompt }, { role: 'assistant', content: 'Generated an updated version of the site.' }])
+      setChat(c => [...c, { role: 'assistant', content: 'Done — updated the site. Check the preview →' }])
       setAiLeft(res.remaining)
-      setAiPrompt('')
-      setPreview(true)
-    } catch (e) { setErr(e.message) }
+      setShowCode(false)
+    } catch (e) {
+      setErr(e.message)
+      setChat(c => [...c, { role: 'assistant', content: `⚠ ${e.message}` }])
+    }
     setAiBusy(false)
   }
 
@@ -225,79 +243,109 @@ function SiteEditor({ root, site, onClose, onSaved }) {
     : name.trim()
 
   return (
-    <div role="dialog" aria-modal="true" aria-label={isNew ? 'New site' : 'Edit site'} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(4,4,10,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: 'clamp(14px,4vw,44px)' }}>
-      <div className="card rise" style={{ width: '100%', maxWidth: 760, padding: 'clamp(22px,3.5vw,36px)', background: '#0B0B14' }}>
+    <div role="dialog" aria-modal="true" aria-label={isNew ? 'New site' : 'Edit site'} style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(20,20,31,0.45)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: 'clamp(14px,4vw,44px)' }}>
+      <div className="card rise" style={{ width: '100%', maxWidth: 760, padding: 'clamp(22px,3.5vw,36px)', background: 'var(--surface)', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <h2 className="display" style={{ fontSize: '1.25rem', fontWeight: 700 }}>{isNew ? 'New site' : `Edit — ${site.name}`}</h2>
           <button onClick={onClose} className="glass-btn" aria-label="Close" style={{ padding: 9, borderRadius: 10 }}><X size={16} /></button>
         </div>
 
-        <label style={{ display: 'block', fontSize: '0.85rem', color: '#B9B9CC', marginBottom: 8 }}>Site name</label>
+        <label className="ink-soft" style={{ display: 'block', fontSize: '0.85rem', marginBottom: 8 }}>Site name</label>
         <input className="field" value={name} maxLength={80} onChange={e => setName(e.target.value)} placeholder="Nasi Lemak Corner" />
 
         {isNew && (
           <>
-            <label style={{ display: 'block', fontSize: '0.85rem', color: '#B9B9CC', margin: '20px 0 8px' }}>Your link</label>
+            <label className="ink-soft" style={{ display: 'block', fontSize: '0.85rem', margin: '20px 0 8px' }}>Your link</label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
               <input className="field mono" style={{ borderRadius: '12px 0 0 12px', fontSize: '0.9rem' }} value={subdomain}
                 onChange={e => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))} placeholder="nasilemakcorner" maxLength={63} />
-              <span className="mono" style={{ padding: '13px 16px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.13)', borderLeft: 'none', borderRadius: '0 12px 12px 0', fontSize: '0.9rem', color: '#8A8AA0', whiteSpace: 'nowrap' }}>.{root}</span>
+              <span className="mono ink-soft" style={{ padding: '13px 16px', background: 'var(--surface-sunken)', border: '1.5px solid var(--border-strong)', borderLeft: 'none', borderRadius: '0 12px 12px 0', fontSize: '0.9rem', whiteSpace: 'nowrap' }}>.{root}</span>
             </div>
             {subdomain && (
-              <div className="mono" style={{ marginTop: 8, fontSize: '0.76rem', color: avail === true ? '#39FF14' : avail === false ? '#FF7070' : '#8A8AA0' }}>
+              <div className="mono" style={{ marginTop: 8, fontSize: '0.76rem', color: avail === true ? 'var(--success)' : avail === false ? 'var(--danger)' : 'var(--ink-soft)' }}>
                 {avail === 'checking' ? 'Checking…' : avail === true ? `✓ ${subdomain}.${root} is yours` : avail === false ? '✗ Taken or not allowed — try another' : ''}
               </div>
             )}
           </>
         )}
 
-        <div style={{ marginTop: 22, borderRadius: 14, border: '1px solid rgba(129,140,248,0.35)', background: 'linear-gradient(160deg, rgba(99,102,241,0.1), rgba(34,211,238,0.05))', padding: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginBottom: 10 }}>
+        <div style={{ marginTop: 22, borderRadius: 14, border: '1px solid rgba(109,90,254,0.25)', background: 'linear-gradient(160deg, rgba(109,90,254,0.06), rgba(23,182,196,0.04))', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '12px 16px', borderBottom: chat.length ? '1px solid rgba(109,90,254,0.15)' : 'none' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', fontWeight: 600 }}>
-              <Sparkles size={15} className="gold-text" /> AI builder
+              <Sparkles size={15} className="gold-text" /> AI Agent
             </span>
-            {aiLeft !== null && <span className="mono" style={{ fontSize: '0.68rem', color: '#8A8AA0' }}>{aiLeft} left today</span>}
+            {aiLeft !== null && <span className="mono ink-soft" style={{ fontSize: '0.68rem' }}>{aiLeft} left today</span>}
           </div>
-          <p style={{ fontSize: '0.8rem', color: '#8A8AA0', marginBottom: 12, fontWeight: 300 }}>
-            {html.trim().length >= 20
-              ? 'Describe a change and the AI edits the code below — "make it dark green", "add a menu section with prices".'
-              : 'No code yet? Describe your site and the AI writes it — "landing page for a nasi lemak stall in Melaka, WhatsApp 0123456789, gold and black".'}
-          </p>
-          <div style={{ display: 'flex', gap: 9 }}>
+
+          {chat.length > 0 && (
+            <div style={{ maxHeight: 260, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {chat.map((m, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <div style={{
+                    maxWidth: '82%', padding: '9px 13px', borderRadius: m.role === 'user' ? '14px 14px 3px 14px' : '14px 14px 14px 3px',
+                    fontSize: '0.86rem', lineHeight: 1.55,
+                    background: m.role === 'user' ? 'var(--brand-grad)' : 'var(--surface)',
+                    color: m.role === 'user' ? '#fff' : 'var(--ink)',
+                    border: m.role === 'user' ? 'none' : '1px solid var(--border)',
+                  }}>
+                    {m.content}
+                  </div>
+                </div>
+              ))}
+              {aiBusy && (
+                <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+                  <div className="ink-soft" style={{ padding: '9px 13px', borderRadius: '14px 14px 14px 3px', fontSize: '0.86rem', background: 'var(--surface)', border: '1px solid var(--border)', animation: 'hnPulse 1.2s ease-in-out infinite' }}>
+                    ✦ Writing…
+                  </div>
+                </div>
+              )}
+              <div ref={chatEndRef} />
+            </div>
+          )}
+
+          {chat.length === 0 && (
+            <p className="ink-soft" style={{ fontSize: '0.8rem', padding: '0 16px 12px', fontWeight: 400 }}>
+              {html.trim().length >= 20
+                ? 'Describe a change and the agent edits the site — "make it dark green", "add a menu section with prices".'
+                : 'Describe your site and the agent writes it — "landing page for a nasi lemak stall in Melaka, WhatsApp 0123456789, gold and black". Keep chatting to refine it.'}
+            </p>
+          )}
+
+          <div style={{ display: 'flex', gap: 9, padding: '12px 16px', borderTop: chat.length ? '1px solid rgba(109,90,254,0.15)' : 'none' }}>
             <input className="field" value={aiPrompt} disabled={aiBusy}
               onChange={e => setAiPrompt(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') generate() }}
               placeholder={html.trim().length >= 20 ? 'What should change?' : 'Describe your website…'}
               style={{ flex: 1 }} />
-            <button onClick={generate} disabled={aiBusy || !aiPrompt.trim()} className="nova-btn" aria-label="Generate with AI"
-              style={{ padding: '0 20px', borderRadius: 12, fontWeight: 600, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 118, justifyContent: 'center' }}>
-              {aiBusy ? <span style={{ animation: 'hnPulse 1.1s ease-in-out infinite' }}>✦ Writing…</span> : <><Send size={14} /> Generate</>}
+            <button onClick={generate} disabled={aiBusy || !aiPrompt.trim()} className="nova-btn" aria-label="Send to AI Agent"
+              style={{ padding: '0 18px', borderRadius: 12, fontWeight: 600, fontSize: '0.88rem', display: 'inline-flex', alignItems: 'center', gap: 8, minWidth: 50, justifyContent: 'center' }}>
+              <Send size={15} />
             </button>
           </div>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '20px 0 8px' }}>
-          <label style={{ fontSize: '0.85rem', color: '#B9B9CC' }}>
-            {isNew ? 'Paste your site\u2019s code (HTML)' : 'Paste new code to replace the current site (leave empty to keep it)'}
+          <label className="ink-soft" style={{ fontSize: '0.85rem' }}>
+            {html.trim().length >= 20 ? 'Site preview' : (isNew ? 'Or paste your site’s code (HTML) directly' : 'Paste new code to replace the current site (leave empty to keep it)')}
           </label>
           {html.trim().length >= 20 && (
-            <button onClick={() => setPreview(p => !p)} className="glass-btn" style={{ padding: '6px 13px', borderRadius: 9, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <Eye size={12} /> {preview ? 'Back to code' : 'Preview'}
+            <button onClick={() => setShowCode(c => !c)} className="glass-btn" style={{ padding: '6px 13px', borderRadius: 9, fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Eye size={12} /> {showCode ? 'Back to preview' : 'View code'}
             </button>
           )}
         </div>
-        {preview ? (
-          <iframe title="Preview" sandbox="allow-scripts" srcDoc={html} style={{ width: '100%', height: 320, borderRadius: 12, border: '1px solid rgba(255,255,255,0.13)', background: '#fff' }} />
+        {html.trim().length >= 20 && !showCode ? (
+          <iframe title="Preview" sandbox="allow-scripts" srcDoc={html} style={{ width: '100%', height: 320, borderRadius: 12, border: '1.5px solid var(--border-strong)', background: '#fff' }} />
         ) : (
           <textarea className="field mono" rows={12} spellCheck={false} value={html} onChange={e => setHtml(e.target.value)}
-            placeholder={'<!DOCTYPE html>\n<html>\n  ...the code your AI generated...\n</html>'}
+            placeholder={'<!DOCTYPE html>\n<html>\n  ...paste code here, or just describe your site to the agent above...\n</html>'}
             style={{ resize: 'vertical', fontSize: '0.82rem', lineHeight: 1.6 }} />
         )}
-        <div className="mono" style={{ marginTop: 7, fontSize: '0.72rem', color: html.length > 1_500_000 ? '#FF7070' : '#6E6E85' }}>
+        <div className="mono ink-faint" style={{ marginTop: 7, fontSize: '0.72rem', color: html.length > 1_500_000 ? 'var(--danger)' : undefined }}>
           {(html.length / 1024).toFixed(0)} KB / 1,500 KB · single-file HTML works best — host big images on a CDN and link them
         </div>
 
-        {err && <div role="alert" style={{ marginTop: 16, padding: '12px 16px', borderRadius: 11, background: 'rgba(255,80,80,0.08)', border: '1px solid rgba(255,80,80,0.35)', fontSize: '0.87rem', color: '#FF9C9C' }}>{err}</div>}
+        {err && <div role="alert" style={{ marginTop: 16, padding: '12px 16px', borderRadius: 11, background: 'rgba(214,72,58,0.06)', border: '1px solid rgba(214,72,58,0.3)', fontSize: '0.87rem', color: 'var(--danger)' }}>{err}</div>}
 
         <div style={{ display: 'flex', gap: 12, marginTop: 26, flexWrap: 'wrap' }}>
           <button onClick={save} disabled={!canSave || busy} className="nova-btn" style={{ padding: '13px 28px', borderRadius: 99, fontWeight: 600, fontSize: '0.93rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -320,33 +368,33 @@ function PayModal({ info, payEmail, onClose, notify }) {
   }
   const mail = `mailto:${payEmail}?subject=${encodeURIComponent(`Payment ${info.reference} — ${info.site.name}`)}&body=${encodeURIComponent(`Hi HarNova,\n\nI've paid RM${amount} for "${info.site.name}" (${info.site.subdomain}).\nReference: ${info.reference}\n\nReceipt attached.`)}`
   return (
-    <div role="dialog" aria-modal="true" aria-label="Pay by QR" style={{ position: 'fixed', inset: 0, zIndex: 220, background: 'rgba(4,4,10,0.82)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: 'clamp(14px,4vw,44px)' }}>
-      <div className="card rise" style={{ width: '100%', maxWidth: 480, padding: 'clamp(24px,4vw,36px)', background: '#0B0B14', textAlign: 'center' }}>
+    <div role="dialog" aria-modal="true" aria-label="Pay by QR" style={{ position: 'fixed', inset: 0, zIndex: 220, background: 'rgba(20,20,31,0.5)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflowY: 'auto', padding: 'clamp(14px,4vw,44px)' }}>
+      <div className="card rise" style={{ width: '100%', maxWidth: 480, padding: 'clamp(24px,4vw,36px)', background: 'var(--surface)', textAlign: 'center', boxShadow: 'var(--shadow-lg)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
           <h2 className="display" style={{ fontSize: '1.2rem', fontWeight: 700 }}>Pay RM{amount} by QR</h2>
           <button onClick={onClose} className="glass-btn" aria-label="Close" style={{ padding: 9, borderRadius: 10 }}><X size={16} /></button>
         </div>
         <img src="/qr.png" alt="DuitNow QR — scan with any Malaysian banking app" width="230" height="230"
-          style={{ borderRadius: 16, background: '#fff', padding: 10, width: 230, height: 230, objectFit: 'contain' }}
+          style={{ borderRadius: 16, background: '#fff', padding: 10, width: 230, height: 230, objectFit: 'contain', border: '1px solid var(--border)' }}
           onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'block' }} />
-        <div style={{ display: 'none', padding: '30px 16px', border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 14, color: '#8A8AA0', fontSize: '0.88rem' }}>
-          QR is on the way — email us at <span style={{ color: '#F4F4FA' }}>{payEmail}</span> for payment details.
+        <div className="ink-soft" style={{ display: 'none', padding: '30px 16px', border: '1px dashed var(--border-strong)', borderRadius: 14, fontSize: '0.88rem' }}>
+          QR is on the way — email us at <span style={{ color: 'var(--ink)' }}>{payEmail}</span> for payment details.
         </div>
-        <p style={{ marginTop: 18, fontSize: '0.9rem', color: '#B9B9CC', lineHeight: 1.6 }}>
-          Scan with any Malaysian banking app (DuitNow), and put this reference in the <strong style={{ color: '#F4F4FA' }}>transfer notes</strong>:
+        <p className="ink-soft" style={{ marginTop: 18, fontSize: '0.9rem', lineHeight: 1.6 }}>
+          Scan with any Malaysian banking app (DuitNow), and put this reference in the <strong style={{ color: 'var(--ink)' }}>transfer notes</strong>:
         </p>
         <button onClick={copyRef} className="glass-btn mono" style={{ marginTop: 12, padding: '12px 20px', borderRadius: 12, fontSize: '1rem', letterSpacing: '0.06em', display: 'inline-flex', alignItems: 'center', gap: 10 }}>
           {info.reference} <Copy size={14} />
         </button>
-        <ol style={{ textAlign: 'left', margin: '20px auto 0', maxWidth: 360, color: '#8A8AA0', fontSize: '0.87rem', lineHeight: 1.7, paddingLeft: 20 }}>
+        <ol className="ink-soft" style={{ textAlign: 'left', margin: '20px auto 0', maxWidth: 360, fontSize: '0.87rem', lineHeight: 1.7, paddingLeft: 20 }}>
           <li>Scan &amp; pay RM{amount} with the reference in the notes</li>
-          <li>Email your receipt to <a href={mail} style={{ color: '#22D3EE' }}>{payEmail}</a></li>
+          <li>Email your receipt to <a href={mail} style={{ color: 'var(--cyan)' }}>{payEmail}</a></li>
           <li>We verify and your site goes live — usually within a few hours, always same day</li>
         </ol>
         <a href={mail} className="nova-btn" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, marginTop: 22, padding: '13px 28px', borderRadius: 99, fontWeight: 600, fontSize: '0.92rem' }}>
           I've paid — email my receipt <ArrowUpRight size={15} />
         </a>
-        <p style={{ marginTop: 14, fontSize: '0.76rem', color: '#6E6E85' }}>Your site stays saved as a draft until we confirm the payment.</p>
+        <p className="ink-faint" style={{ marginTop: 14, fontSize: '0.76rem' }}>Your site stays saved as a draft until we confirm the payment.</p>
       </div>
     </div>
   )
@@ -370,22 +418,22 @@ function AdminQueue({ notify, onChanged }) {
   return (
     <section style={{ marginTop: 46 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <ShieldCheck size={17} color="#F5C542" />
+        <ShieldCheck size={17} className="gold-text" />
         <h2 className="display" style={{ fontSize: '1.1rem', fontWeight: 700 }}>Payment queue</h2>
-        <span className="mono" style={{ fontSize: '0.72rem', color: '#8A8AA0' }}>ADMIN · {queue.length} pending</span>
+        <span className="mono ink-soft" style={{ fontSize: '0.72rem' }}>ADMIN · {queue.length} pending</span>
       </div>
       {queue.length === 0 ? (
-        <p style={{ marginTop: 14, color: '#6E6E85', fontSize: '0.9rem' }}>All clear — nothing waiting for verification.</p>
+        <p className="ink-faint" style={{ marginTop: 14, fontSize: '0.9rem' }}>All clear — nothing waiting for verification.</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
           {queue.map(p => (
             <div key={p.id} className="card" style={{ padding: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14 }}>
               <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-                <span className="mono" style={{ fontSize: '0.85rem', color: '#F5C542' }}>{p.reference}</span>
-                <div style={{ fontSize: '0.85rem', color: '#B9B9CC', marginTop: 5 }}>
+                <span className="mono gold-text" style={{ fontSize: '0.85rem' }}>{p.reference}</span>
+                <div className="ink-soft" style={{ fontSize: '0.85rem', marginTop: 5 }}>
                   {p.sites?.name} · <span className="mono" style={{ fontSize: '0.78rem' }}>{p.sites?.subdomain}</span>
                 </div>
-                <div style={{ fontSize: '0.78rem', color: '#6E6E85', marginTop: 3 }}>
+                <div className="ink-faint" style={{ fontSize: '0.78rem', marginTop: 3 }}>
                   {p.profiles?.email} · RM{(p.amount_sen / 100).toFixed(2)} · {new Date(p.created_at).toLocaleString('en-MY')}
                 </div>
               </div>
@@ -394,7 +442,7 @@ function AdminQueue({ notify, onChanged }) {
                   <Check size={13} /> Approve
                 </button>
                 <button disabled={busy === p.id} onClick={() => act(p, 'reject')} className="glass-btn" style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <X size={13} color="#FF7070" /> Reject
+                  <X size={13} color="var(--danger)" /> Reject
                 </button>
               </div>
             </div>

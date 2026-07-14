@@ -329,19 +329,50 @@ async function handleApi(req, env, url) {
     const body = await req.json().catch(() => ({}))
     const prompt = String(body.prompt || '').trim().slice(0, 2000)
     if (!prompt) return j({ error: 'Describe the site you want first.' }, 400, cors)
+    const siteId = typeof body.site_id === 'string' ? body.site_id : null
 
     const dayStart = new Date().toISOString().slice(0, 10) + 'T00:00:00Z'
     const used = await sb(env, `ai_generations?user_id=eq.${user.id}&created_at=gte.${dayStart}&select=id`)
     const LIMIT = Number(env.AI_DAILY_LIMIT || 25)
     if (used.length >= LIMIT) return j({ error: `Daily AI limit reached (${LIMIT}). Resets at midnight UTC — or paste code from any AI chat.` }, 429, cors)
 
+    // If a site_id is given, load its persisted chat history (draft sites belong to a
+    // real site row created before the first generation, so this works for both flows).
+    let history = body.history
+    if (siteId) {
+      const owned = await sb(env, `sites?id=eq.${siteId}&user_id=eq.${user.id}&select=id&limit=1`)
+      if (!owned.length) return j({ error: 'Site not found.' }, 404, cors)
+      const rows = await sb(env, `site_messages?site_id=eq.${siteId}&select=role,content&order=created_at.asc&limit=40`)
+      history = rows
+    }
+
     let html
     try {
-      html = await generateSiteHtml(env, { prompt, currentHtml: body.currentHtml, history: body.history })
+      html = await generateSiteHtml(env, { prompt, currentHtml: body.currentHtml, history })
     } catch (e) { return j({ error: e.message }, e.status || 502, cors) }
 
     await sb(env, 'ai_generations', { method: 'POST', body: { user_id: user.id } })
+
+    if (siteId) {
+      await sb(env, 'site_messages', {
+        method: 'POST',
+        body: [
+          { site_id: siteId, role: 'user', content: prompt },
+          { site_id: siteId, role: 'assistant', content: 'Generated an updated version of the site.' },
+        ],
+      })
+    }
+
     return j({ html, remaining: LIMIT - used.length - 1 }, 200, cors)
+  }
+
+  /* Chat history for a site's AI builder thread */
+  if (path.match(/^\/sites\/[0-9a-f-]{36}\/messages$/) && method === 'GET') {
+    const id = path.split('/')[2]
+    const owned = await sb(env, `sites?id=eq.${id}&user_id=eq.${user.id}&select=id&limit=1`)
+    if (!owned.length) return j({ error: 'Site not found.' }, 404, cors)
+    const rows = await sb(env, `site_messages?site_id=eq.${id}&select=role,content,created_at&order=created_at.asc&limit=200`)
+    return j({ messages: rows }, 200, cors)
   }
 
 
