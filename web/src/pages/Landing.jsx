@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Sparkles, Code2, Rocket, ShieldCheck, RefreshCw, Globe, Check, Moon, Sun } from 'lucide-react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { NovaMark, getInitialTheme, applyTheme } from '../lib/core.jsx'
+import { NovaMark } from '../lib/core.jsx'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -31,10 +31,9 @@ const MOCK_HTML = `<!doctype html><html><head><style>
   <a class="btn">Order on WhatsApp →</a></div>
 </body></html>`
 
-export default function Landing({ session, nav }) {
+export default function Landing({ session, nav, theme, toggleTheme }) {
   const [showcase, setShowcase] = useState([])
   const [root, setRoot] = useState('harnova.my')
-  const [theme, setTheme] = useState(getInitialTheme)
   const scopeRef = useRef(null)
 
   useEffect(() => {
@@ -42,9 +41,6 @@ export default function Landing({ session, nav }) {
       .then(d => { setShowcase(d.sites || []); if (d.root) setRoot(d.root) })
       .catch(() => {})
   }, [])
-
-  useEffect(() => { applyTheme(theme) }, [theme])
-  const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
 
   useEffect(() => {
     const ctx = gsap.context(() => {

@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { supabase, signInWithGoogle, GLOBAL_CSS, NovaMark } from './lib/core.jsx'
+import { supabase, signInWithGoogle, GLOBAL_CSS, NovaMark, getInitialTheme, applyTheme } from './lib/core.jsx'
 import Landing from './pages/Landing'
 import Dashboard from './pages/Dashboard'
 import Terms from './pages/Terms'
@@ -10,6 +10,7 @@ import Contact from './pages/Contact'
 function App() {
   const [session, setSession] = useState(undefined) // undefined = loading
   const [path, setPath] = useState(window.location.pathname)
+  const [theme, setTheme] = useState(getInitialTheme)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session))
@@ -19,17 +20,22 @@ function App() {
     return () => { sub.subscription.unsubscribe(); window.removeEventListener('popstate', onPop) }
   }, [])
 
+  // Applied once at the app shell so the saved preference takes effect no
+  // matter which page a visitor lands on first (not just Landing).
+  useEffect(() => { applyTheme(theme) }, [theme])
+  const toggleTheme = () => setTheme(t => (t === 'dark' ? 'light' : 'dark'))
+
   const nav = to => { window.history.pushState({}, '', to); setPath(to) }
 
   let page
   if (path.startsWith('/terms')) page = <Terms nav={nav} />
-  else if (path.startsWith('/demo')) page = <Demo nav={nav} />
-  else if (path.startsWith('/contact')) page = <Contact nav={nav} />
+  else if (path.startsWith('/demo')) page = <Demo nav={nav} theme={theme} toggleTheme={toggleTheme} />
+  else if (path.startsWith('/contact')) page = <Contact nav={nav} theme={theme} toggleTheme={toggleTheme} />
   else if (path.startsWith('/app')) {
     if (session === undefined) page = <Loading />
     else if (!session) page = <SignIn />
-    else page = <Dashboard session={session} nav={nav} />
-  } else page = <Landing session={session} nav={nav} />
+    else page = <Dashboard session={session} nav={nav} theme={theme} toggleTheme={toggleTheme} />
+  } else page = <Landing session={session} nav={nav} theme={theme} toggleTheme={toggleTheme} />
 
   return (
     <>
