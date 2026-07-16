@@ -420,6 +420,69 @@ async function handleApi(req, env, url) {
     return j({ ok: true }, 200, cors)
   }
 
+  /* ── Admin: leads list ── */
+  if (path === '/admin/leads' && method === 'GET') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const rows = await sb(env, `leads?select=*&order=created_at.desc`)
+    return j({ leads: rows }, 200, cors)
+  }
+
+  /* ── Admin: update a lead (status/notes) ── */
+  if (path.match(/^\/admin\/leads\/[0-9a-f-]{36}$/) && method === 'PATCH') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const id = path.split('/')[3]
+    const body = await req.json().catch(() => ({}))
+    const allowed = ['status', 'notes']
+    const patch = {}
+    for (const k of allowed) if (k in body) patch[k] = body[k]
+    if (Object.keys(patch).length === 0) return j({ error: 'Nothing to update.' }, 400, cors)
+    patch.updated_at = new Date().toISOString()
+    const rows = await sb(env, `leads?id=eq.${id}`, { method: 'PATCH', body: patch })
+    if (!rows[0]) return j({ error: 'Lead not found.' }, 404, cors)
+    return j({ lead: rows[0] }, 200, cors)
+  }
+
+  /* ── Admin: add leads manually (used when seeding / after a manual Maps search) ── */
+  if (path === '/admin/leads' && method === 'POST') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const body = await req.json().catch(() => ({}))
+    const items = Array.isArray(body.leads) ? body.leads : [body]
+    if (!items.length) return j({ error: 'No leads provided.' }, 400, cors)
+    const rows = await sb(env, `leads`, { method: 'POST', body: items })
+    return j({ leads: rows }, 200, cors)
+  }
+
+  /* ── Admin: lead search requests — queue a "find more leads" ask ── */
+  if (path === '/admin/lead-search-requests' && method === 'GET') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const rows = await sb(env, `lead_search_requests?select=*&order=created_at.desc`)
+    return j({ requests: rows }, 200, cors)
+  }
+
+  if (path === '/admin/lead-search-requests' && method === 'POST') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const body = await req.json().catch(() => ({}))
+    const category = (body.category || '').trim()
+    const city = (body.city || '').trim()
+    if (!category || !city) return j({ error: 'Category and city are required.' }, 400, cors)
+    const rows = await sb(env, `lead_search_requests`, {
+      method: 'POST',
+      body: { category, city, notes: (body.notes || '').trim() || null, requested_by: user.email },
+    })
+    return j({ request: rows[0] }, 200, cors)
+  }
+
+  if (path.match(/^\/admin\/lead-search-requests\/[0-9a-f-]{36}\/dismiss$/) && method === 'POST') {
+    if (!isAdmin(env, user)) return j({ error: 'forbidden' }, 403, cors)
+    const id = path.split('/')[3]
+    const rows = await sb(env, `lead_search_requests?id=eq.${id}`, {
+      method: 'PATCH',
+      body: { status: 'dismissed', fulfilled_at: new Date().toISOString() },
+    })
+    if (!rows[0]) return j({ error: 'Request not found.' }, 404, cors)
+    return j({ request: rows[0] }, 200, cors)
+  }
+
     return j({ error: 'not found' }, 404, cors)
 }
 

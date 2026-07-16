@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowUpRight, Plus, Trash2, RefreshCw, Rocket, Check, X, Pencil, Eye, LogOut, Globe, QrCode, Copy, ShieldCheck, Sparkles, Send } from 'lucide-react'
+import { ArrowUpRight, Plus, Trash2, RefreshCw, Rocket, Check, X, Pencil, Eye, LogOut, Globe, QrCode, Copy, ShieldCheck, Sparkles, Send, Search, Phone, MapPin, Star, Clipboard } from 'lucide-react'
 import { supabase, api, daysLeft, NovaMark } from '../lib/core.jsx'
 
 const W = { maxWidth: 1000, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }
@@ -90,6 +90,8 @@ export default function Dashboard({ session, nav }) {
         )}
 
         {admin && <AdminQueue notify={notify} onChanged={load} />}
+
+        {admin && <LeadsPanel notify={notify} />}
 
         {payInfo && <PayModal info={payInfo} payEmail={payEmail} onClose={() => { setPayInfo(null); load() }} notify={notify} />}
 
@@ -444,6 +446,176 @@ function AdminQueue({ notify, onChanged }) {
                 <button disabled={busy === p.id} onClick={() => act(p, 'reject')} className="glass-btn" style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                   <X size={13} color="var(--danger)" /> Reject
                 </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const LEAD_STATUSES = ['not_contacted', 'contacted', 'interested', 'declined', 'converted']
+const STATUS_LABEL = { not_contacted: 'Not contacted', contacted: 'Contacted', interested: 'Interested', declined: 'Declined', converted: 'Converted' }
+
+function LeadsPanel({ notify }) {
+  const [leads, setLeads] = useState(null)
+  const [requests, setRequests] = useState(null)
+  const [busy, setBusy] = useState(null)
+  const [showForm, setShowForm] = useState(false)
+  const [category, setCategory] = useState('')
+  const [city, setCity] = useState('')
+  const [reqNotes, setReqNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const loadLeads = () => api('/admin/leads').then(d => setLeads(d.leads)).catch(e => notify(e.message, false))
+  const loadRequests = () => api('/admin/lead-search-requests').then(d => setRequests(d.requests)).catch(e => notify(e.message, false))
+  useEffect(() => { loadLeads(); loadRequests() }, [])
+
+  const setStatus = async (lead, status) => {
+    setBusy(lead.id)
+    try {
+      await api(`/admin/leads/${lead.id}`, { method: 'PATCH', body: { status } })
+      notify(`${lead.business_name} marked ${STATUS_LABEL[status].toLowerCase()}.`)
+      loadLeads()
+    } catch (e) { notify(e.message, false) }
+    setBusy(null)
+  }
+
+  const copyDraft = async (lead) => {
+    try {
+      await navigator.clipboard.writeText(lead.outreach_draft || '')
+      notify('Outreach message copied.')
+    } catch { notify('Could not copy — select and copy manually.', false) }
+  }
+
+  const submitRequest = async (e) => {
+    e.preventDefault()
+    if (!category.trim() || !city.trim()) return
+    setSubmitting(true)
+    try {
+      await api('/admin/lead-search-requests', { method: 'POST', body: { category: category.trim(), city: city.trim(), notes: reqNotes.trim() } })
+      notify('Search request queued — run it via Google Maps when you get a chance, then add the results here.')
+      setCategory(''); setCity(''); setReqNotes(''); setShowForm(false)
+      loadRequests()
+    } catch (e) { notify(e.message, false) }
+    setSubmitting(false)
+  }
+
+  const dismissRequest = async (r) => {
+    setBusy(r.id)
+    try {
+      await api(`/admin/lead-search-requests/${r.id}/dismiss`, { method: 'POST' })
+      loadRequests()
+    } catch (e) { notify(e.message, false) }
+    setBusy(null)
+  }
+
+  if (!leads) return null
+  const pendingRequests = (requests || []).filter(r => r.status === 'pending')
+
+  return (
+    <section style={{ marginTop: 46 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Search size={17} className="gold-text" />
+        <h2 className="display" style={{ fontSize: '1.1rem', fontWeight: 700 }}>Leads</h2>
+        <span className="mono ink-soft" style={{ fontSize: '0.72rem' }}>ADMIN · {leads.length} found</span>
+        <button onClick={() => setShowForm(v => !v)} className="glass-btn" style={{ marginLeft: 'auto', padding: '8px 16px', borderRadius: 99, fontSize: '0.82rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Plus size={13} /> Find new leads
+        </button>
+      </div>
+
+      {showForm && (
+        <form onSubmit={submitRequest} className="card" style={{ marginTop: 16, padding: 18, display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
+          <div style={{ flex: '1 1 160px' }}>
+            <label className="ink-soft" style={{ display: 'block', fontSize: '0.78rem', marginBottom: 6 }}>Category</label>
+            <input className="field" value={category} onChange={e => setCategory(e.target.value)} placeholder="e.g. bakery, photographer" required />
+          </div>
+          <div style={{ flex: '1 1 140px' }}>
+            <label className="ink-soft" style={{ display: 'block', fontSize: '0.78rem', marginBottom: 6 }}>City</label>
+            <input className="field" value={city} onChange={e => setCity(e.target.value)} placeholder="e.g. Penang" required />
+          </div>
+          <div style={{ flex: '2 1 220px' }}>
+            <label className="ink-soft" style={{ display: 'block', fontSize: '0.78rem', marginBottom: 6 }}>Notes (optional)</label>
+            <input className="field" value={reqNotes} onChange={e => setReqNotes(e.target.value)} placeholder="Anything specific to look for" />
+          </div>
+          <button type="submit" disabled={submitting} className="nova-btn" style={{ padding: '11px 20px', borderRadius: 10, fontSize: '0.85rem', fontWeight: 600 }}>
+            {submitting ? 'Queuing…' : 'Queue request'}
+          </button>
+        </form>
+      )}
+
+      <p className="ink-faint" style={{ marginTop: 12, fontSize: '0.78rem', lineHeight: 1.6 }}>
+        There's no live Google Maps API wired up here, so "Find new leads" queues a request — search Google Maps yourself (or ask me) for that category + city, checking which listings have no "Website" button, then add them below as new leads.
+      </p>
+
+      {pendingRequests.length > 0 && (
+        <div style={{ marginTop: 18 }}>
+          <div className="ink-soft" style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 8 }}>Pending search requests</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {pendingRequests.map(r => (
+              <div key={r.id} className="card" style={{ padding: 12, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{r.category}</span>
+                <span className="ink-faint" style={{ fontSize: '0.8rem' }}>in {r.city}</span>
+                {r.notes && <span className="ink-faint" style={{ fontSize: '0.78rem' }}>· {r.notes}</span>}
+                <button disabled={busy === r.id} onClick={() => dismissRequest(r)} className="glass-btn" style={{ marginLeft: 'auto', padding: '6px 12px', borderRadius: 99, fontSize: '0.76rem' }}>
+                  Dismiss
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {leads.length === 0 ? (
+        <p className="ink-faint" style={{ marginTop: 14, fontSize: '0.9rem' }}>No leads yet — queue a search request above to get started.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 18 }}>
+          {leads.map(lead => (
+            <div key={lead.id} className="card" style={{ padding: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, alignItems: 'flex-start' }}>
+                <div style={{ flex: '1 1 260px', minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{lead.business_name}</span>
+                    {lead.rating != null && (
+                      <span className="ink-soft" style={{ fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                        <Star size={11} /> {lead.rating} ({lead.reviews ?? 0})
+                      </span>
+                    )}
+                  </div>
+                  <div className="ink-soft" style={{ fontSize: '0.82rem', marginTop: 5 }}>{lead.category} · {lead.city}</div>
+                  {lead.address && (
+                    <div className="ink-faint" style={{ fontSize: '0.78rem', marginTop: 4, display: 'flex', gap: 5 }}>
+                      <MapPin size={12} style={{ marginTop: 2, flexShrink: 0 }} /> {lead.address}
+                    </div>
+                  )}
+                  {lead.phone && (
+                    <div className="ink-faint" style={{ fontSize: '0.78rem', marginTop: 3, display: 'flex', gap: 5, alignItems: 'center' }}>
+                      <Phone size={12} /> {lead.phone}
+                    </div>
+                  )}
+                  <div className="mono ink-faint" style={{ fontSize: '0.72rem', marginTop: 6 }}>{lead.web_presence}</div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: '0 0 auto' }}>
+                  <select
+                    value={lead.status}
+                    disabled={busy === lead.id}
+                    onChange={e => setStatus(lead, e.target.value)}
+                    className="field"
+                    style={{ padding: '8px 12px', borderRadius: 10, fontSize: '0.82rem' }}
+                  >
+                    {LEAD_STATUSES.map(s => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
+                  </select>
+                  <button onClick={() => copyDraft(lead)} className="glass-btn" style={{ padding: '8px 14px', borderRadius: 10, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                    <Clipboard size={13} /> Copy message
+                  </button>
+                  {lead.phone && (
+                    <a href={`https://wa.me/6${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="glass-btn" style={{ padding: '8px 14px', borderRadius: 10, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                      <Send size={13} /> WhatsApp
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           ))}
