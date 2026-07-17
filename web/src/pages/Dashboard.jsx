@@ -613,7 +613,7 @@ function LeadsPanel({ notify }) {
                     <Clipboard size={13} /> Copy message
                   </button>
                   {lead.phone && (
-                    <a href={`https://wa.me/6${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="glass-btn" style={{ padding: '8px 14px', borderRadius: 10, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                    <a href={`https://wa.me/6${lead.phone.replace(/\D/g, '')}${lead.outreach_draft ? `?text=${encodeURIComponent(lead.outreach_draft)}` : ''}`} target="_blank" rel="noreferrer" className="glass-btn" style={{ padding: '8px 14px', borderRadius: 10, fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
                       <Send size={13} /> WhatsApp
                     </a>
                   )}
