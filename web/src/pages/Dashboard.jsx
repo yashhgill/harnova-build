@@ -93,6 +93,8 @@ export default function Dashboard({ session, nav }) {
 
         {admin && <LeadsPanel notify={notify} />}
 
+        {admin && <ModuleCatalog />}
+
         {payInfo && <PayModal info={payInfo} payEmail={payEmail} onClose={() => { setPayInfo(null); load() }} notify={notify} />}
 
         {(creating || editing) && (
@@ -621,6 +623,62 @@ function LeadsPanel({ notify }) {
           ))}
         </div>
       )}
+    </section>
+  )
+}
+
+const MODULE_CATALOG = [
+  {
+    name: 'AI site generator',
+    dir: 'ai-site-generator/',
+    blurb: 'Groq-powered AI HTML generation — system prompt, generate function, demo + authed usage handlers. What powers the "paste my code" flow here.',
+  },
+  {
+    name: 'Client site scaffold',
+    dir: 'client-site-scaffold/',
+    blurb: 'Cloudflare Worker core (auth, CORS, Supabase helpers), wrangler.toml template, starter schema — the base every new client project starts from.',
+  },
+  {
+    name: 'Lead finder & outreach',
+    dir: 'lead-finder/',
+    blurb: 'Manual, no-cost Google Maps lead-finding workflow, outreach message templates, admin panel UI, Worker endpoints, PDPA-aware notes.',
+  },
+  {
+    name: 'Email routing',
+    dir: 'email-routing/',
+    blurb: 'Free inbound email for any client domain via Cloudflare Email Routing — destination verification, routing rules, DNS sync checklist.',
+  },
+  {
+    name: 'Manual QR payments',
+    dir: 'payments-manual-qr/',
+    blurb: 'DuitNow QR payment flow with no gateway fees — customer submits proof, admin manually confirms in their bank app before marking paid.',
+  },
+]
+
+function ModuleCatalog() {
+  return (
+    <section style={{ marginTop: 46 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <Sparkles size={17} className="gold-text" />
+        <h2 className="display" style={{ fontSize: '1.1rem', fontWeight: 700 }}>Module library</h2>
+        <span className="mono ink-soft" style={{ fontSize: '0.72rem' }}>ADMIN · {MODULE_CATALOG.length} modules</span>
+      </div>
+      <p className="ink-faint" style={{ marginTop: 8, fontSize: '0.78rem', lineHeight: 1.6, maxWidth: 640 }}>
+        Reusable code extracted from this site, kept in a private master repo (harnova-modules) —
+        not deployed anywhere itself. When a client requests a service, pull the relevant module(s)
+        from there into a new or existing project instead of building from scratch.
+      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+        {MODULE_CATALOG.map(m => (
+          <div key={m.dir} className="card" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.92rem' }}>{m.name}</span>
+              <span className="mono ink-faint" style={{ fontSize: '0.74rem' }}>{m.dir}</span>
+            </div>
+            <p className="ink-soft" style={{ fontSize: '0.84rem', marginTop: 6, lineHeight: 1.55 }}>{m.blurb}</p>
+          </div>
+        ))}
+      </div>
     </section>
   )
 }
