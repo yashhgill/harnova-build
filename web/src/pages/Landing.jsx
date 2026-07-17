@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, Sparkles, Code2, Rocket, ShieldCheck, RefreshCw, Globe, Check, Moon, Sun } from 'lucide-react'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { NovaMark } from '../lib/core.jsx'
+import { NovaMark, api } from '../lib/core.jsx'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -11,7 +11,7 @@ const W = { maxWidth: 1180, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' 
 const STEPS = [
   { icon: ShieldCheck, title: 'Sign in with Google', text: 'One tap. Your sites live under your own account, no forms to fill.' },
   { icon: Code2, title: 'Paste or generate code', text: 'Bring HTML from ChatGPT or v0 — or chat with our built-in AI Agent and it writes the whole site for you.' },
-  { icon: Sparkles, title: 'Pay RM300 by QR', text: 'Scan our DuitNow QR with any Malaysian banking app. One payment, one site, 30 days live.' },
+  { icon: Sparkles, title: 'Pay by QR', text: 'Scan our DuitNow QR with any Malaysian banking app. One payment, one site, 30 days live.' },
   { icon: Rocket, title: 'You’re live', text: 'yourname.harnova.my with SSL, served from Cloudflare’s edge, worldwide, instantly.' },
 ]
 
@@ -32,6 +32,11 @@ const MOCK_HTML = `<!doctype html><html><head><style>
 </body></html>`
 
 export default function Landing({ session, nav, theme, toggleTheme }) {
+  const [priceSen, setPriceSen] = useState(30000)
+  const [normalPriceSen, setNormalPriceSen] = useState(30000)
+  useEffect(() => { api('/pricing').then(d => { setPriceSen(d.priceSen); setNormalPriceSen(d.normalPriceSen) }).catch(() => {}) }, [])
+  const priceLabel = `RM${(priceSen / 100).toFixed(0)}`
+  const isPromo = priceSen < normalPriceSen
   const [showcase, setShowcase] = useState([])
   const [root, setRoot] = useState('harnova.my')
   const scopeRef = useRef(null)
@@ -258,8 +263,13 @@ export default function Landing({ session, nav, theme, toggleTheme }) {
           </div>
           <div className="card reveal-up" style={{ padding: 'clamp(30px,4vw,48px)', background: 'linear-gradient(160deg, rgba(109,90,254,0.07), rgba(155,107,255,0.04) 55%, rgba(23,182,196,0.04))', textAlign: 'center', position: 'relative', overflow: 'hidden', boxShadow: 'var(--shadow-lg)' }}>
             <div aria-hidden="true" style={{ position: 'absolute', top: -70, right: -70, width: 220, height: 220, borderRadius: '50%', background: 'radial-gradient(circle, rgba(200,145,42,0.12), transparent 70%)' }} />
-            <div className="mono ink-soft" style={{ fontSize: '0.72rem', letterSpacing: '0.18em' }}>PER SITE · PER MONTH</div>
-            <div className="display" style={{ fontSize: 'clamp(3rem,6vw,4.2rem)', fontWeight: 800, margin: '14px 0 6px', letterSpacing: '-0.02em' }}>RM300</div>
+            <div className="mono ink-soft" style={{ fontSize: '0.72rem', letterSpacing: '0.18em' }}>PER SITE · PER MONTH{isPromo ? ' · LIMITED TIME' : ''}</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 10, margin: '14px 0 6px' }}>
+              <div className="display" style={{ fontSize: 'clamp(3rem,6vw,4.2rem)', fontWeight: 800, letterSpacing: '-0.02em' }}>{priceLabel}</div>
+              {isPromo && (
+                <div className="ink-faint" style={{ fontSize: '1.1rem', textDecoration: 'line-through' }}>RM{(normalPriceSen / 100).toFixed(0)}</div>
+              )}
+            </div>
             <p className="ink-soft" style={{ fontSize: '0.95rem', fontWeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               30 days of hosting · renew to keep it live <RefreshCw size={12} />
             </p>

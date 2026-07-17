@@ -118,7 +118,7 @@ async function sendExpiryReminders(env) {
           subject: `${site.name} expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — renew to stay live`,
           html: `<p>Hi,</p>
 <p>Your site <strong>${site.name}</strong> (<a href="https://${host}">${host}</a>) is set to expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.</p>
-<p>Renew for another 30 days for RM300 by logging into your dashboard and paying the QR — same as when you first set it up: <a href="https://${env.APP_HOST}">${env.APP_HOST}</a></p>
+<p>Renew for another 30 days for RM${(currentPriceSen(env) / 100).toFixed(0)} by logging into your dashboard and paying the QR — same as when you first set it up: <a href="https://${env.APP_HOST}">${env.APP_HOST}</a></p>
 <p>If it lapses, the site stops being served until it's renewed.</p>
 <p>— HarNova Build</p>`,
         }),
@@ -132,6 +132,16 @@ async function sendExpiryReminders(env) {
     } catch { /* one failed email shouldn't stop the rest */ }
   }
   return { sent, checked: rows.length }
+}
+
+/* ─── Pricing (promo-aware) ────────────────────────────────────────
+ * RM150 promo through 24 Sept 2026 (Malaysia time), then reverts to the
+ * normal PRICE_SEN (RM300) automatically — no manual flip needed. */
+const PROMO_PRICE_SEN = 15000
+const PROMO_END = new Date('2026-09-24T16:00:00Z') // 2026-09-25 00:00 MYT (UTC+8)
+function currentPriceSen(env) {
+  const normal = Number(env.PRICE_SEN || 30000)
+  return new Date() < PROMO_END ? PROMO_PRICE_SEN : normal
 }
 
 /* ─── Site serving (the product itself) ───────────────────────────── */
@@ -261,6 +271,11 @@ async function handleApi(req, env, url) {
     return j({ sites: rows, root: env.ROOT_DOMAIN }, 200, cors)
   }
 
+  /* ── Public: current price (promo-aware) ── */
+  if (path === '/pricing' && method === 'GET') {
+    return j({ priceSen: currentPriceSen(env), promoUntil: PROMO_END.toISOString(), normalPriceSen: Number(env.PRICE_SEN || 30000) }, 200, cors)
+  }
+
   /* ── Public: subdomain availability ── */
   if (path === '/check' && method === 'GET') {
     const sub = (url.searchParams.get('subdomain') || '').toLowerCase()
@@ -317,7 +332,7 @@ async function handleApi(req, env, url) {
   /* List my sites */
   if (path === '/sites' && method === 'GET') {
     const rows = await sb(env, `sites?user_id=eq.${user.id}&select=id,name,subdomain,custom_domain,status,showcase,expires_at,created_at&order=created_at.desc`)
-    return j({ sites: rows, root: env.ROOT_DOMAIN, admin: isAdmin(env, user), payEmail: env.PAY_EMAIL || null }, 200, cors)
+    return j({ sites: rows, root: env.ROOT_DOMAIN, admin: isAdmin(env, user), payEmail: env.PAY_EMAIL || null, priceSen: currentPriceSen(env), promoUntil: PROMO_END.toISOString(), normalPriceSen: Number(env.PRICE_SEN || 30000) }, 200, cors)
   }
 
   /* Create a site (draft until paid) */
@@ -437,7 +452,7 @@ async function handleApi(req, env, url) {
     if (!payment) {
       const rows = await sb(env, 'payments', {
         method: 'POST',
-        body: { user_id: user.id, site_id: site.id, reference: makeReference(site.subdomain), amount_sen: Number(env.PRICE_SEN || 30000), status: 'pending' },
+        body: { user_id: user.id, site_id: site.id, reference: makeReference(site.subdomain), amount_sen: currentPriceSen(env), status: 'pending' },
       })
       payment = rows[0]
     }

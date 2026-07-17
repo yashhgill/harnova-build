@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ArrowUpRight, Sparkles, Send, Globe, Eye, Code2, RefreshCw } from 'lucide-react'
-import { NovaMark } from '../lib/core.jsx'
+import { NovaMark, api } from '../lib/core.jsx'
 import { useEffect } from 'react'
 
 const W = { maxWidth: 1000, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }
@@ -13,6 +13,9 @@ const EXAMPLES = [
 ]
 
 export default function Demo({ nav }) {
+  const [priceSen, setPriceSen] = useState(30000)
+  useEffect(() => { api('/pricing').then(d => setPriceSen(d.priceSen)).catch(() => {}) }, [])
+  const priceLabel = `RM${(priceSen / 100).toFixed(0)}`
   const [showcase, setShowcase] = useState([])
   const [root, setRoot] = useState('harnova.my')
   const [prompt, setPrompt] = useState('')
@@ -66,7 +69,7 @@ export default function Demo({ nav }) {
             Describe your site.<br /><span className="nova-text">Watch the AI build it.</span>
           </h1>
           <p className="ink-soft" style={{ marginTop: 16, fontSize: '0.98rem', maxWidth: 560, margin: '16px auto 0', fontWeight: 400 }}>
-            A few free generations, no account needed. Like the result? Sign in to keep refining it and put it live on your own harnova.my link for RM300.
+            A few free generations, no account needed. Like the result? Sign in to keep refining it and put it live on your own harnova.my link for {priceLabel}.
           </p>
         </div>
       </header>
@@ -106,7 +109,7 @@ export default function Demo({ nav }) {
                   style={{ width: '100%', height: 460, borderRadius: 14, border: '1px solid var(--border-strong)', background: '#fff' }} />
                 <div style={{ marginTop: 16, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   <button onClick={() => nav('/app')} className="nova-btn" style={{ padding: '12px 24px', borderRadius: 99, fontWeight: 600, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                    <Sparkles size={14} /> Sign in to host this — RM300 <ArrowUpRight size={15} />
+                    <Sparkles size={14} /> Sign in to host this — {priceLabel} <ArrowUpRight size={15} />
                   </button>
                   <button onClick={() => generate()} disabled={busy} className="glass-btn" style={{ padding: '12px 20px', borderRadius: 99, fontSize: '0.9rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     <RefreshCw size={13} /> Try another prompt

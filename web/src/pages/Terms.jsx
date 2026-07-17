@@ -4,7 +4,7 @@ import { NovaMark } from '../lib/core.jsx'
 const W = { maxWidth: 760, margin: '0 auto', padding: '0 clamp(18px,4vw,40px)' }
 
 const SECTIONS = [
-  ['The service', 'HarNova Build hosts a static website you provide, on a harnova.my subdomain, for 30 days per RM300 payment. Activation happens after we manually verify your DuitNow transfer — usually within a few hours, always the same day. Your site stays saved as a draft until then.'],
+  ['The service', 'HarNova Build hosts a static website you provide, on a harnova.my subdomain, for 30 days per payment at the price shown at checkout (promotions may apply from time to time). Activation happens after we manually verify your DuitNow transfer — usually within a few hours, always the same day. Your site stays saved as a draft until then.'],
   ['Renewals & expiry', 'Each payment adds 30 days on top of your current expiry. If a site expires it is not deleted — it shows a renewal notice page, and one payment brings it straight back. No refunds once a site has been activated, but unpaid drafts can be deleted anytime.'],
   ['Acceptable use', 'You must own or have the right to publish everything in your code. Not allowed: anything illegal in Malaysia, scams or phishing, malware, gambling, adult content, hate content, or impersonating other businesses. We can suspend or remove a site that breaks these rules, without refund, and will cooperate with Malaysian authorities where required.'],
   ['Your content, your responsibility', 'We host your HTML as-is and do not review, edit, or endorse it. You are the publisher of your site and solely responsible for its content, its accuracy, and any data it collects from visitors.'],

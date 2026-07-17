@@ -13,10 +13,12 @@ export default function Dashboard({ session, nav }) {
   const [payInfo, setPayInfo] = useState(null) // QR payment modal data
   const [admin, setAdmin] = useState(false)
   const [payEmail, setPayEmail] = useState('yashchaal99@gmail.com')
+  const [priceSen, setPriceSen] = useState(30000)
+  const priceLabel = `RM${(priceSen / 100).toFixed(0)}`
 
   const notify = (msg, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 4200) }
 
-  const load = () => api('/sites').then(d => { setSites(d.sites); setRoot(d.root); setAdmin(!!d.admin); if (d.payEmail) setPayEmail(d.payEmail) }).catch(e => notify(e.message, false))
+  const load = () => api('/sites').then(d => { setSites(d.sites); setRoot(d.root); setAdmin(!!d.admin); if (d.payEmail) setPayEmail(d.payEmail); if (d.priceSen) setPriceSen(d.priceSen) }).catch(e => notify(e.message, false))
   useEffect(() => { load() }, [])
 
   const pay = async site => {
@@ -63,7 +65,7 @@ export default function Dashboard({ session, nav }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 className="display" style={{ fontSize: 'clamp(1.4rem,3vw,1.9rem)', fontWeight: 700 }}>My sites</h1>
-            <p className="ink-soft" style={{ fontSize: '0.92rem', marginTop: 6, fontWeight: 400 }}>RM300 per site per 30 days. Renew anytime — days stack on top.</p>
+            <p className="ink-soft" style={{ fontSize: '0.92rem', marginTop: 6, fontWeight: 400 }}>{priceLabel} per site per 30 days. Renew anytime — days stack on top.</p>
           </div>
           <button onClick={() => { setEditing(null); setCreating(true) }} className="nova-btn" style={{ padding: '12px 24px', borderRadius: 99, fontWeight: 600, fontSize: '0.92rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
             <Plus size={16} /> New site
@@ -77,7 +79,7 @@ export default function Dashboard({ session, nav }) {
             <Rocket size={30} color="var(--indigo)" />
             <h2 style={{ fontSize: '1.15rem', fontWeight: 600, margin: '16px 0 8px' }}>Launch your first site</h2>
             <p className="ink-soft" style={{ fontSize: '0.94rem', maxWidth: 420, margin: '0 auto', fontWeight: 400 }}>
-              Paste the HTML your AI generated, pick a name, pay RM300 — and it's live with SSL on your own link.
+              Paste the HTML your AI generated, pick a name, pay {priceLabel} — and it's live with SSL on your own link.
             </p>
             <button onClick={() => setCreating(true)} className="nova-btn" style={{ marginTop: 24, padding: '13px 30px', borderRadius: 99, fontWeight: 600 }}>
               Paste my code
@@ -85,7 +87,7 @@ export default function Dashboard({ session, nav }) {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 34 }}>
-            {sites.map(s => <SiteRow key={s.id} site={s} root={root} onPay={pay} onShowcase={toggleShowcase} onDelete={remove} onEdit={() => { setCreating(false); setEditing(s) }} />)}
+            {sites.map(s => <SiteRow key={s.id} site={s} root={root} priceLabel={priceLabel} onPay={pay} onShowcase={toggleShowcase} onDelete={remove} onEdit={() => { setCreating(false); setEditing(s) }} />)}
           </div>
         )}
 
@@ -100,12 +102,13 @@ export default function Dashboard({ session, nav }) {
         {(creating || editing) && (
           <SiteEditor
             root={root}
+            priceLabel={priceLabel}
             site={editing}
             onClose={() => { setCreating(false); setEditing(null) }}
             onSaved={(site, isNew) => {
               setCreating(false); setEditing(null)
               load()
-              if (isNew) { notify('Site saved as draft — one RM300 QR payment and it’s live.'); pay(site) }
+              if (isNew) { notify(`Site saved as draft — one ${priceLabel} QR payment and it’s live.`); pay(site) }
               else notify('Code updated. Changes appear within a minute.')
             }}
           />
@@ -133,7 +136,7 @@ function StatusPill({ site }) {
   return <span className="mono" style={{ fontSize: '0.68rem', padding: '4px 11px', borderRadius: 99, background: bg, border: `1px solid ${bd}`, color: fg, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
-function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
+function SiteRow({ site, root, priceLabel, onPay, onShowcase, onDelete, onEdit }) {
   const url = `https://${site.subdomain}.${root}`
   const live = site.status === 'live' && daysLeft(site.expires_at) > 0
   return (
@@ -157,7 +160,7 @@ function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
           <Pencil size={13} /> Edit code
         </button>
         <button onClick={() => onPay(site)} className="nova-btn" style={{ padding: '9px 16px', borderRadius: 10, fontSize: '0.83rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {live ? <><RefreshCw size={13} /> Renew +30d</> : <><QrCode size={13} /> Pay RM300 · go live</>}
+          {live ? <><RefreshCw size={13} /> Renew +30d</> : <><QrCode size={13} /> Pay {priceLabel} · go live</>}
         </button>
         <button onClick={() => onDelete(site)} className="glass-btn" aria-label={`Delete ${site.name}`} style={{ padding: '9px 11px', borderRadius: 10 }}>
           <Trash2 size={14} color="var(--danger)" />
@@ -167,7 +170,7 @@ function SiteRow({ site, root, onPay, onShowcase, onDelete, onEdit }) {
   )
 }
 
-function SiteEditor({ root, site, onClose, onSaved }) {
+function SiteEditor({ root, priceLabel, site, onClose, onSaved }) {
   const isNew = !site
   const [name, setName] = useState(site?.name || '')
   const [subdomain, setSubdomain] = useState(site?.subdomain || '')
@@ -353,7 +356,7 @@ function SiteEditor({ root, site, onClose, onSaved }) {
 
         <div style={{ display: 'flex', gap: 12, marginTop: 26, flexWrap: 'wrap' }}>
           <button onClick={save} disabled={!canSave || busy} className="nova-btn" style={{ padding: '13px 28px', borderRadius: 99, fontWeight: 600, fontSize: '0.93rem', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-            {busy ? 'Saving…' : isNew ? <><Rocket size={15} /> Save & pay RM300</> : 'Save changes'}
+            {busy ? 'Saving…' : isNew ? <><Rocket size={15} /> Save & pay {priceLabel}</> : 'Save changes'}
           </button>
           <button onClick={onClose} className="glass-btn" style={{ padding: '13px 24px', borderRadius: 99, fontSize: '0.93rem' }}>Cancel</button>
         </div>
