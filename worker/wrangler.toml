@@ -28,9 +28,16 @@ PAY_EMAIL = "yashchaal99@gmail.com"           # where users email their payment 
 GROQ_MODEL = "openai/gpt-oss-120b"
 AI_DAILY_LIMIT = "25"
 DEMO_DAILY_LIMIT = "5"                        # free, no-signup AI trials per IP per day on /demo
+REMINDER_FROM_EMAIL = "HarNova Build <noreply@harnova.my>"  # requires harnova.my verified as a sending domain in Resend
+
+# Daily cron — checks for sites expiring within 3 days and emails a renew
+# reminder once per billing period (see sendExpiryReminders in index.js).
+[triggers]
+crons = ["0 2 * * *"]  # 02:00 UTC = 10:00 AM Malaysia time
 
 # Secrets (already set in production; re-run only when rotating):
 #   wrangler secret put SUPABASE_URL
 #   wrangler secret put SUPABASE_ANON_KEY
 #   wrangler secret put SUPABASE_SERVICE_KEY
 #   wrangler secret put GROQ_API_KEY
+#   wrangler secret put RESEND_API_KEY        # new — required for expiry reminder emails

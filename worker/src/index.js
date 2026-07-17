@@ -81,8 +81,57 @@ async function activatePayment(env, payment) {
     ? new Date(sites[0].expires_at) : new Date()
   const next = new Date(base.getTime() + 30 * 24 * 3600 * 1000).toISOString()
   await sb(env, `sites?id=eq.${payment.site_id}`, {
-    method: 'PATCH', body: { status: 'live', expires_at: next },
+    method: 'PATCH', body: { status: 'live', expires_at: next, reminder_sent_at: null },
   })
+}
+
+/* ─── Expiry reminders (daily cron) ───────────────────────────────
+ * Emails a customer once, ~3 days before their site's 30-day period ends,
+ * with a renew nudge. reminder_sent_at is cleared on every renewal
+ * (see activatePayment) so the next cycle gets its own reminder.
+ * Uses Resend's REST API directly — no SDK needed. */
+async function sendExpiryReminders(env) {
+  const windowEnd = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString()
+  const rows = await sb(
+    env,
+    `sites?status=eq.live&expires_at=lte.${windowEnd}&expires_at=gt.${new Date().toISOString()}&reminder_sent_at=is.null&select=id,name,subdomain,custom_domain,expires_at,user_id,profiles(email)`
+  )
+  if (!rows?.length) return { sent: 0 }
+
+  let sent = 0
+  for (const site of rows) {
+    const email = site.profiles?.email
+    if (!email) continue
+    const host = site.custom_domain || `${site.subdomain}.${env.ROOT_DOMAIN}`
+    const daysLeft = Math.max(0, Math.ceil((new Date(site.expires_at) - Date.now()) / 86400000))
+
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${env.RESEND_API_KEY}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: env.REMINDER_FROM_EMAIL || `HarNova Build <noreply@${env.ROOT_DOMAIN}>`,
+          to: [email],
+          subject: `${site.name} expires in ${daysLeft} day${daysLeft === 1 ? '' : 's'} — renew to stay live`,
+          html: `<p>Hi,</p>
+<p>Your site <strong>${site.name}</strong> (<a href="https://${host}">${host}</a>) is set to expire in ${daysLeft} day${daysLeft === 1 ? '' : 's'}.</p>
+<p>Renew for another 30 days for RM300 by logging into your dashboard and paying the QR — same as when you first set it up: <a href="https://${env.APP_HOST}">${env.APP_HOST}</a></p>
+<p>If it lapses, the site stops being served until it's renewed.</p>
+<p>— HarNova Build</p>`,
+        }),
+      })
+      if (res.ok) {
+        await sb(env, `sites?id=eq.${site.id}`, {
+          method: 'PATCH', body: { reminder_sent_at: new Date().toISOString() },
+        })
+        sent++
+      }
+    } catch { /* one failed email shouldn't stop the rest */ }
+  }
+  return { sent, checked: rows.length }
 }
 
 /* ─── Site serving (the product itself) ───────────────────────────── */
@@ -518,5 +567,10 @@ export default {
     }
     if (req.method === 'GET' && res.status === 200) ctx.waitUntil(cache.put(cacheKey, res.clone()))
     return res
+  },
+
+  /* Daily cron (see [triggers] in wrangler.toml) — expiry reminder emails. */
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(sendExpiryReminders(env).catch(() => {}))
   },
 }
